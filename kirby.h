@@ -21,7 +21,7 @@ public:
     Kirby();
 
     void update(const class QSet<int> &keys);  // 每幀更新位置
-    void draw(class QPainter &painter);
+    void draw(class QPainter &painter, float cameraX);
     QRectF getRect() const;                    // 取得碰撞框
 
     float x, y;         // 位置
@@ -45,6 +45,8 @@ private:
 
     int animFrame;    // 目前播到第幾張
     int animCounter;  // 計數器，控制換圖速度
+    bool isFlying;      // 是否在飛行中
+    int flyCount;       // 已飛幾次（限制連續飛行次數）
 
     static const float SPEED;
     static const float JUMP_FORCE;

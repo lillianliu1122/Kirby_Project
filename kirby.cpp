@@ -14,7 +14,8 @@ const int Kirby::KIRBY_CH = 76;   // 蹲下高度（down 比例）
 Kirby::Kirby()
     : x(100), y(800), vx(0), vy(0),
       onGround(false), facingRight(true),
-      state(KirbyState::Idle), animFrame(0), animCounter(0)
+      state(KirbyState::Idle), animFrame(0), animCounter(0),
+      isFlying(false), flyCount(0)
 {
     loadImages();
 }
@@ -64,19 +65,43 @@ void Kirby::update(const QSet<int> &keys)
         vx = 0;
     }
 
-    // 蹲下
+    // 蹲下（只有在地上才能蹲）
     if (keys.contains(Qt::Key_Down) && onGround) {
         state = KirbyState::Crouch;
         vx = 0;
     }
-    // 跳躍
-    else if (keys.contains(Qt::Key_Up) && onGround) {
-        vy = JUMP_FORCE;
-        onGround = false;
+    // 跳躍或飛行
+    else if (keys.contains(Qt::Key_Up)) {
+        if (onGround) {
+            // 地上按 Up → 跳躍
+            vy = JUMP_FORCE;
+            onGround = false;
+            isFlying = false;
+            flyCount = 0;
+        } else if (!isFlying) {
+            // 空中第一次按 Up → 開始飛行
+            isFlying = true;
+            vy = -8.0f;   // 向上推力
+        } else {
+            // 飛行中持續按住 Up → 維持緩慢上升
+            vy = -4.0f;
+        }
+    } else {
+        // 放開 Up → 停止飛行推力，自然下落
+        if (isFlying) {
+            isFlying = false;
+        }
     }
 
-    // 重力
-    vy += GRAVITY;
+    // 重力（飛行時重力減半，讓下落更緩）
+    if (isFlying) {
+        vy += GRAVITY * 0.5f;
+    } else {
+        vy += GRAVITY;
+    }
+
+    // 限制飛行時最大下落速度
+    if (isFlying && vy > 3.0f) vy = 3.0f;
 
     // 更新位置
     x += vx;
@@ -87,11 +112,16 @@ void Kirby::update(const QSet<int> &keys)
         y = 850;
         vy = 0;
         onGround = true;
+        isFlying = false;
     }
 
     // 更新動作狀態
     if (!onGround) {
-        state = KirbyState::Jump;
+        if (isFlying) {
+            state = KirbyState::Fly;
+        } else {
+            state = KirbyState::Jump;
+        }
     } else if (keys.contains(Qt::Key_Down)) {
         state = KirbyState::Crouch;
     } else if (vx != 0) {
@@ -140,22 +170,24 @@ QPixmap Kirby::currentFrame() const
     }
 }
 
-void Kirby::draw(QPainter &painter)
+void Kirby::draw(QPainter &painter, float cameraX)
 {
     QPixmap frame = currentFrame();
+    int drawX = (int)(x - cameraX);  // 套用攝影機偏移
+
     if (!frame.isNull()) {
         // 蹲下時用原始圖片比例，其他動作維持 50x50 ()
         //kirby_down 這張圖比較矮
         if (state == KirbyState::Crouch) {
             // 蹲下：貼齊地板底部
-            painter.drawPixmap((int)x, (int)y + 4*(KIRBY_H - KIRBY_CH), KIRBY_W, KIRBY_CH, frame);
+            painter.drawPixmap(drawX, (int)y + (KIRBY_H - KIRBY_CH), KIRBY_W, KIRBY_CH, frame);
         } else {
-            painter.drawPixmap((int)x, (int)y, KIRBY_W, KIRBY_H, frame);
+            painter.drawPixmap(drawX, (int)y, KIRBY_W, KIRBY_H, frame);
         }
     } else {
         // 圖片載入失敗時顯示粉紅色方塊（debug 用）
         painter.setBrush(QColor(255, 105, 180));
-        painter.drawRect((int)x, (int)y, KIRBY_W, KIRBY_H);
+        painter.drawRect(drawX, (int)y, KIRBY_W, KIRBY_H);
     }
 }
 

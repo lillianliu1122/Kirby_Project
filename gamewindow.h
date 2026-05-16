@@ -28,6 +28,7 @@ private:
     QTimer *timer;
     QSet<int> keysHeld;  // 記錄目前哪些鍵被按住
     Kirby kirby;
+    float cameraX;  // 攝影機水平偏移量
 };
 
 #endif // GAMEWINDOW_H
