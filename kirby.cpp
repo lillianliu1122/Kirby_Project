@@ -107,13 +107,13 @@ void Kirby::update(const QSet<int> &keys)
     x += vx;
     y += vy;
 
-    // 暫時地板
+    /* 暫時地板
     if (y >= 850) {
         y = 850;
         vy = 0;
         onGround = true;
         isFlying = false;
-    }
+    }*/
 
     // 更新動作狀態
     if (!onGround) {

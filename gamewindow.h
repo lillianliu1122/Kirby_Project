@@ -7,6 +7,8 @@
 #include <QPainter>
 #include <QSet>
 #include "kirby.h"
+#include "platform.h"
+#include <QVector>
 
 class GameWindow : public QMainWindow
 {
@@ -29,6 +31,9 @@ private:
     QSet<int> keysHeld;  // 記錄目前哪些鍵被按住
     Kirby kirby;
     float cameraX;  // 攝影機水平偏移量
+    QVector<Platform> platforms;  // 所有平台
+    void loadStage1();             // 載入 Stage 1 地圖
+    void checkCollisions();        // 碰撞判定
 };
 
 #endif // GAMEWINDOW_H

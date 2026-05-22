@@ -11,11 +11,13 @@ CONFIG += c++11
 SOURCES += \
     kirby.cpp \
     main.cpp \
-    gamewindow.cpp
+    gamewindow.cpp \
+    platform.cpp
 
 HEADERS += \
     gamewindow.h \
-    kirby.h
+    kirby.h \
+    platform.h
 
 FORMS += \
     gamewindow.ui

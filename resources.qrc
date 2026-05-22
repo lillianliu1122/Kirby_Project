@@ -25,5 +25,23 @@
         <file>Image/Kirby_normal/kirby_run_4_R.png</file>
         <file>Image/Kirby_normal/kirby_stop_L.png</file>
         <file>Image/Kirby_normal/kirby_stop_R.png</file>
+        <file>Image/item/1UP.png</file>
+        <file>Image/item/brick.png</file>
+        <file>Image/item/door.png</file>
+        <file>Image/item/floor.png</file>
+        <file>Image/item/goal_door.png</file>
+        <file>Image/item/HP_0.png</file>
+        <file>Image/item/HP_1.png</file>
+        <file>Image/item/life.png</file>
+        <file>Image/item/Maxim Tomato.png</file>
+        <file>Image/background/game_over_continue.png</file>
+        <file>Image/background/game_over_quit.png</file>
+        <file>Image/background/Stage1(1).png</file>
+        <file>Image/background/Stage1(2).png</file>
+        <file>Image/background/Stage1(3).png</file>
+        <file>Image/background/Stage2(1).png</file>
+        <file>Image/background/Stage2(2).png</file>
+        <file>Image/background/start.png</file>
+        <file>Image/background/supplement(1).jpg</file>
     </qresource>
 </RCC>
