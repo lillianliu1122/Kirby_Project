@@ -36,12 +36,13 @@
         <file>Image/item/Maxim Tomato.png</file>
         <file>Image/background/game_over_continue.png</file>
         <file>Image/background/game_over_quit.png</file>
-        <file>Image/background/Stage1(1).png</file>
-        <file>Image/background/Stage1(2).png</file>
-        <file>Image/background/Stage1(3).png</file>
         <file>Image/background/Stage2(1).png</file>
         <file>Image/background/Stage2(2).png</file>
         <file>Image/background/start.png</file>
         <file>Image/background/supplement(1).jpg</file>
+        <file>Image/background/Stage1(4).png</file>
+        <file>Image/background/Stage1(5).png</file>
+        <file>Image/background/Stage1(1).png</file>
+        <file>Image/background/Stage1(2).png</file>
     </qresource>
 </RCC>

@@ -7,12 +7,12 @@ const float Kirby::SPEED      = 5.0f;
 const float Kirby::JUMP_FORCE = -15.0f;
 const float Kirby::GRAVITY    = 0.6f;
 
-const int Kirby::KIRBY_W = 80;
-const int Kirby::KIRBY_H = 80;
-const int Kirby::KIRBY_CH = 76;   // 蹲下高度（down 比例）
+const int Kirby::KIRBY_W = 100;
+const int Kirby::KIRBY_H = 100;
+const int Kirby::KIRBY_CH = 100*76/80;   // 蹲下高度（down 比例）
 
 Kirby::Kirby()
-    : x(100), y(800), vx(0), vy(0),
+    : x(100), y(600), vx(0), vy(0),
       onGround(false), facingRight(true),
       state(KirbyState::Idle), animFrame(0), animCounter(0),
       isFlying(false), flyCount(0)

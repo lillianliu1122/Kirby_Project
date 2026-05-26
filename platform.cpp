@@ -1,28 +1,16 @@
 #include "platform.h"
-/*
-QPixmap Platform::imgFloor;
-QPixmap Platform::imgBrick;
-bool Platform::imagesLoaded = false;*/
+
 QPixmap* Platform::imgFloor = nullptr;
 QPixmap* Platform::imgBrick = nullptr;
 
 Platform::Platform(float x, float y, float w, float h, PlatformType type)
     : type(type), visible(true), x(x), y(y), w(w), h(h)
-{
-    /*if (!imagesLoaded) {
-        imgFloor = QPixmap(":/Image/item/floor.png");
-        imgBrick = QPixmap(":/Image/item/brick.png");
-        imagesLoaded = true;
-    }*/
-}
+{}
 
 void Platform::draw(QPainter &painter, float cameraX)
 {
     if (!visible) return;
-
-    //int drawX = (int)(x - cameraX);
-    //QPixmap &img = (type == PlatformType::Brick) ? imgBrick : imgFloor;
-
+    if (type == PlatformType::Invisible) return;
     // 第一次畫的時候才載入圖片
     if (!imgFloor) imgFloor = new QPixmap(":/Image/item/floor.png");
     if (!imgBrick) imgBrick = new QPixmap(":/Image/item/brick.png");

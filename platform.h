@@ -7,7 +7,8 @@
 
 enum class PlatformType {
     Floor,   // 地板
-    Brick    // 磚頭（可被星星彈打破）
+    Brick,    // 磚頭（可被星星彈打破）
+    Invisible  // 透明碰撞區塊（無圖片，單向）
 };
 
 class Platform

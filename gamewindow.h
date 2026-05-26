@@ -23,6 +23,8 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;     // 按下按鍵
     void keyReleaseEvent(QKeyEvent *event) override;   // 放開按鍵
 
+    void mousePressEvent(QMouseEvent *event) override; // 鎖定座標 之後刪掉
+
 private slots:
     void gameLoop();   // 每幀更新
 
@@ -34,6 +36,8 @@ private:
     QVector<Platform> platforms;  // 所有平台
     void loadStage1();             // 載入 Stage 1 地圖
     void checkCollisions();        // 碰撞判定
+    QPixmap bgStage1[3];  // Stage 1 三個 frame 的背景
+    void loadBackground();
 };
 
 #endif // GAMEWINDOW_H

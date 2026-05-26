@@ -28,6 +28,9 @@ public:
     float vx, vy;       // 速度
     bool onGround;      // 是否站在地上
     bool facingRight;   // 面向右邊？
+    static const int KIRBY_W;  // 顯示寬度
+    static const int KIRBY_H;   // 一般高度（run 比例）
+    static const int KIRBY_CH;   // 蹲下高度（down 比例）
 
 private:
     void loadImages();
@@ -51,10 +54,6 @@ private:
     static const float SPEED;
     static const float JUMP_FORCE;
     static const float GRAVITY;
-
-    static const int KIRBY_W;  // 顯示寬度
-    static const int KIRBY_H;   // 一般高度（run 比例）
-    static const int KIRBY_CH;   // 蹲下高度（down 比例）
 };
 
 #endif // KIRBY_H
