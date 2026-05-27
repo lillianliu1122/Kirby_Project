@@ -6,9 +6,17 @@
 #include <QTimer>
 #include <QPainter>
 #include <QSet>
+#include <QVector>
 #include "kirby.h"
 #include "platform.h"
-#include <QVector>
+#include "portal.h"
+
+enum class GameState {
+    StartMenu,   // 開始畫面
+    Playing,     // 遊戲進行中
+    GameOver,    // 遊戲結束
+    StageClear   // 通關
+};
 
 class GameWindow : public QMainWindow
 {
@@ -37,7 +45,18 @@ private:
     void loadStage1();             // 載入 Stage 1 地圖
     void checkCollisions();        // 碰撞判定
     QPixmap bgStage1[3];  // Stage 1 三個 frame 的背景
+    QPixmap bgStage2[5];  // Stage 5 有兩張背景
     void loadBackground();
+
+    GameState gameState;
+    void drawGame(QPainter &painter);
+    void drawStartMenu(QPainter &painter);
+    void drawGameOver(QPainter &painter);
+
+    QVector<Portal> portals;
+    void checkPortal();
+    void loadStage2();
+    int currentStage;
 };
 
 #endif // GAMEWINDOW_H

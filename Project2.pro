@@ -12,12 +12,14 @@ SOURCES += \
     kirby.cpp \
     main.cpp \
     gamewindow.cpp \
-    platform.cpp
+    platform.cpp \
+    portal.cpp
 
 HEADERS += \
     gamewindow.h \
     kirby.h \
-    platform.h
+    platform.h \
+    portal.h
 
 FORMS += \
     gamewindow.ui
