@@ -44,5 +44,9 @@
         <file>Image/background/Stage1(5).png</file>
         <file>Image/background/Stage1(1).png</file>
         <file>Image/background/Stage1(2).png</file>
+        <file>Image/enemies/waddledee.png</file>
+        <file>Image/enemies/gordo.png</file>
+        <file>Image/enemies/hothead.png</file>
+        <file>Image/enemies/sparky.png</file>
     </qresource>
 </RCC>
