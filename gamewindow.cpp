@@ -33,28 +33,41 @@ GameWindow::~GameWindow()
 
 void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
 {
-    // 不同stage的畫面寬度不同
     float mapWidth = (currentStage == 1) ? 4860.0f : 8100.0f;
 
     switch (gameState) {
         case GameState::StartMenu:
-            // 開始畫面只等待按鍵，不更新遊戲邏輯
             break;
 
         case GameState::Playing:
-            kirby.update(keysHeld); // 每幀更新 Kirby
+            kirby.update(keysHeld);
             checkCollisions();
-            // 之後新增 checkHole();
             checkPortal();
 
-            // 鏡頭始終讓 Kirby 保持在畫面中間
-            cameraX = kirby.x - width() / 2.0f;
+            // 敵人行為更新與戰鬥判定區塊
+            for (Enemy* enemy : enemies) {
+                // 1. 更新敵人的移動邏輯與狀態（傳入卡比座標，供怪判斷攻擊時機）
+                enemy->updateBehavior(kirby.x, kirby.y);
+                enemy->checkWallCollision(platforms); // 這是關鍵的一步，防止穿牆！
+                // 2. 檢查怪物是否離開鏡頭太遠，離開就暫時移除，卡比回頭時重新生成
+                enemy->checkRespawn(cameraX, 1620);
 
-            // 鏡頭不超出地圖邊界
+                // 3. 戰鬥扣血判定：如果怪物還活著，就檢查碰撞
+                if (!enemy->getIsDead()) {
+                    // 檢查卡比與怪物碰撞框是否重疊
+                    if (kirby.getRect().intersects(enemy->getCollisionBox())) {
+
+                        // [交接提醒]：若 HP 系統尚未建立，請先保留註解
+                        // kirby.hp -= 1;               // 扣除卡比 1 HP
+                        // kirby.startInvincible();     // 觸發卡比 2 秒閃爍無敵
+                    }
+                }
+            }
+
+            cameraX = kirby.x - width() / 2.0f;
             if (cameraX < 0) cameraX = 0;
             if (cameraX > mapWidth - width()) cameraX = mapWidth - width();
 
-            // 限制 Kirby 不超出 Stage 1 左右邊界
             if (kirby.x < 0) kirby.x = 0;
             if (kirby.x > mapWidth - kirby.KIRBY_W) kirby.x = mapWidth - kirby.KIRBY_W;
 
@@ -67,7 +80,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
             break;
     }
 
-    update();  // 呼叫 paintEvent 重新繪製畫面
+    update();
 }
 
 void GameWindow::paintEvent(QPaintEvent *event)
@@ -103,33 +116,28 @@ void GameWindow::paintEvent(QPaintEvent *event)
 
 void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
 {
-    // 後面畫的會覆蓋前面畫的
     // 1. 天空背景
     painter.fillRect(0, 0, width(), height(), QColor(135, 206, 235));
 
-    // 2. 畫平台（會被草地蓋住）
+    // 2. 畫平台
     for (auto &p : platforms) {
         p.draw(painter, cameraX);
     }
 
-    // 3. 貼地形圖（貼在畫面底部，保持原始比例）
-
-    // Stage1
+    // 3. 貼地形圖
     if (currentStage == 1) {
         for (int i = 0; i < 3; i++) {
             if (bgStage1[i].isNull()) continue;
-            float scale = 1620.0f / bgStage1[i].width(); //寬度固定 1620，高度等比例計算
-            int drawH = (int)(bgStage1[i].height() * scale); //圖片高度
-            int drawY = height() - drawH; //貼在畫面底部
+            float scale = 1620.0f / bgStage1[i].width();
+            int drawH = (int)(bgStage1[i].height() * scale);
+            int drawY = height() - drawH;
             int drawX = (int)(i * 1620 - cameraX);
             if (drawX < width() && drawX + 1620 > 0)
                 painter.drawPixmap(drawX, drawY, 1620, drawH, bgStage1[i]);
         }
     }
-    // Stage 2
     else if (currentStage == 2) {
         for (int i = 0; i < 5; i++) {
-            //if (bgStage2[i].isNull()) continue;
             float scale = 1620.0f / bgStage2[i].width();
             int drawH = (int)(bgStage2[0].height() * scale);
             int drawY = height() - drawH;
@@ -139,13 +147,23 @@ void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
         }
     }
 
-    //  4. 畫傳送門
+    // 4. 畫傳送門
     for (auto &p : portals) {
         p.draw(painter, cameraX);
     }
 
+    // 敵人繪製區塊
+    // 將畫布往左偏移，確保怪物座標與捲軸鏡頭對齊
+    painter.translate(-cameraX, 0);
+
+    for (Enemy* enemy : enemies) {
+        enemy->draw(painter);       // 叫每一隻怪物繪製自己
+    }
+
+    painter.translate(cameraX, 0);  // 畫完怪物後移回畫布
+
     // 5. 畫kirby
-    kirby.draw(painter, cameraX); //把攝影機偏移傳給 Kirby 的 draw
+    kirby.draw(painter, cameraX);
 }
 
 void GameWindow::drawStartMenu(QPainter &painter)
@@ -213,6 +231,7 @@ void GameWindow::loadStage1()//布置platform位置
     platforms.append(Platform(2400, 400,  320, 40, PlatformType::Floor));
     // 磚頭
     // platforms.append(Platform(500,  700,   80, 40, PlatformType::Brick));
+    initStageEnemies(1);
 }
 
 void GameWindow::loadStage2()
@@ -225,6 +244,7 @@ void GameWindow::loadStage2()
 
     // Stage 2 終點門
     portals.append(Portal(7900, 800, PortalType::Goal));
+    initStageEnemies(2);
 }
 
 void GameWindow::checkCollisions()
@@ -322,3 +342,27 @@ void GameWindow::mousePressEvent(QMouseEvent *event)
     qDebug() << "x:" << worldX << "y:" << worldY;
 }
 
+void GameWindow::initStageEnemies(int stage) {
+    enemies.clear(); // 換關卡前清空上一關的怪
+    if (stage == 1) {
+        // Stage 1：只能有小紅豆跟刺球
+        enemies.push_back(new WaddleDee(1500, 800));  // 第一格畫面
+        enemies.push_back(new Gordo(2100, 550));     // 第二格畫面
+        enemies.push_back(new WaddleDee(1800, 700)); // 第三格畫面
+        enemies.push_back(new WaddleDee(850, 700)); // 第三格畫面1
+        enemies.push_back(new Gordo(4000, 550));     // 第二格畫面
+        enemies.push_back(new Gordo(1000, 550));     // 第二格畫面2
+        enemies.push_back(new Gordo(3400, 550));     // 第二格畫面
+
+
+
+
+    }
+    else if (stage == 2) {
+        // Stage 2：加入噴火怪和電電怪
+        enemies.push_back(new WaddleDee(300, 800));
+        enemies.push_back(new HotHead(800, 800));    // 第一格
+        enemies.push_back(new Sparky(1800, 800));    // 第二格
+        enemies.push_back(new Gordo(2400, 400));
+    }
+}

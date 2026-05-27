@@ -10,6 +10,8 @@
 #include "kirby.h"
 #include "platform.h"
 #include "portal.h"
+#include "enemy.h"
+#include <vector>
 
 enum class GameState {
     StartMenu,   // 開始畫面
@@ -43,10 +45,12 @@ private:
     float cameraX;  // 攝影機水平偏移量
     QVector<Platform> platforms;  // 所有平台
     void loadStage1();             // 載入 Stage 1 地圖
+    void initStageEnemies(int stage);  // 用來載入關卡怪物的函式
     void checkCollisions();        // 碰撞判定
     QPixmap bgStage1[3];  // Stage 1 三個 frame 的背景
     QPixmap bgStage2[5];  // Stage 5 有兩張背景
     void loadBackground();
+    std::vector<Enemy*> enemies; // 用來放關卡中所有怪物的動態指標陣列
 
     GameState gameState;
     void drawGame(QPainter &painter);
