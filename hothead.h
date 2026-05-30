@@ -2,24 +2,35 @@
 #define HOTHEAD_H
 
 #include "enemy.h"
+#include "platform.h"
+#include <QVector>
 
 struct FireBall {
     bool active = false;
+    bool hitKirby = false;
     float fx, fy, fvx;
+    int width = 24, height = 24;
 };
 
 class HotHead : public Enemy {
 public:
-    HotHead(int startX, int startY);
+    enum State { PATROL = 0, FIRE_BALL = 1, FLAME_BREATH = 2 };
+
+    HotHead(int startX, int startY, int range, const QVector<Platform>* platforms);
     void updateBehavior(int kirbyX, int kirbyY) override;
     void draw(QPainter &painter) override;
 
-private:
-    int state; // 0: 巡邏, 1: 吐火球, 2: 噴火
-    int actionTimer;
-    bool isFacingRight;
-    bool isBreathingFire;
     FireBall fireBall;
+    State state;
+
+private:
+    int moveRange, startX, actionTimer, fireBallCooldown;
+    bool isFacingRight, isBreathingFire;
+    const QVector<Platform>* currentPlatforms;
+
+    void updatePatrol();
+    void updateFireBall(int kirbyX);
+    void updateFlameBreath();
 };
 
-#endif // HOTHEAD_H
+#endif

@@ -5,7 +5,7 @@
 
 class Sparky : public Enemy {
 public:
-    Sparky(int startX, int startY);
+    Sparky(int startX, int startY, int range);
     void updateBehavior(int kirbyX, int kirbyY) override;
     void draw(QPainter &painter) override;
 
@@ -15,6 +15,7 @@ private:
     int timer;
     int jumpTimer;
     int moveDirection = 1;
+    int moveRange;
     bool isGrounded;
     bool lastFacingLeft = true;
 };

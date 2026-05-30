@@ -1,8 +1,8 @@
 #include "sparky.h"
 
-Sparky::Sparky(int startX, int startY)
+Sparky::Sparky(int startX, int startY, int range)
     : Enemy(startX, startY, "Sparky", "Spark", true),
-      isDischarging(false), timer(0), jumpTimer(0), isGrounded(true) {
+      isDischarging(false), timer(0), jumpTimer(0), moveRange(range), isGrounded(true) {
     vx = 0; vy = 0;
 }
 
@@ -23,8 +23,8 @@ void Sparky::updateBehavior(int kirbyX, int kirbyY) {
 
         // 2. 範圍檢測：決定方向 (只在落地時檢查)
         if (isGrounded) {
-            if (x > startX + 150) moveDirection = -1;      // 超過右邊界，改向左
-            else if (x < startX - 150) moveDirection = 1;  // 超過左邊界，改向右
+            if (x > startX + moveRange) moveDirection = -1;      // 超過右邊界，改向左
+            else if (x < startX - moveRange) moveDirection = 1;  // 超過左邊界，改向右
         }
 
         // 3. 跳躍邏輯
@@ -44,15 +44,17 @@ void Sparky::updateBehavior(int kirbyX, int kirbyY) {
     if (!isGrounded) {
         x += vx;    // 空中維持水平速度
         vy += 1;    // 重力
-    } else {
-        vx = 0;     // 落地立即歸零，防止滑動
     }
     y += vy;
+    if (vx != 0) moveDirection = (vx > 0) ? 1 : -1;
 
     // 5. 地面校正
     if (y >= startY) {
         y = startY; vy = 0; isGrounded = true;
     }
+
+    moveDirection = (vx >= 0) ? 1 : -1;
+    lastFacingLeft = (vx < 0);
 }
 
 void Sparky::draw(QPainter &painter) {

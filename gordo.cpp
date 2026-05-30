@@ -1,8 +1,12 @@
 #include "gordo.h"
 
 Gordo::Gordo(int startX, int startY, int range)
-    : Enemy(startX, startY, "Gordo", "None", false), moveRange(range), moveDirection(1) {
+    : Enemy(startX, startY, "Gordo", "None", false), moveRange(range), moveDirection(1), startY(startY) {
     vy = 3;
+    frameIndex = 0;
+    animationTimer = 0;
+    animationFrames[0].load(":/Image/Gordo/Gordo(0).png");
+    animationFrames[1].load(":/Image/Gordo/Gordo(1).png");
 }
 
 void Gordo::updateBehavior(int kirbyX, int kirbyY) {
@@ -12,9 +16,15 @@ void Gordo::updateBehavior(int kirbyX, int kirbyY) {
     if (y < startY - moveRange || y > startY + moveRange) {
         moveDirection = -moveDirection;
     }
+
+    // 動畫切換
+    animationTimer++;
+    if (animationTimer >= 10) { // 數字越大，切換速度越慢
+        frameIndex = 1 - frameIndex; // 在 0 和 1 之間切換
+        animationTimer = 0;
+    }
 }
 
 void Gordo::draw(QPainter &painter) {
-    QPixmap img(":/Image/Gordo/Gordo(0).png");
-    painter.drawPixmap(x, y, width, height, img);
+    painter.drawPixmap(x, y, width, height, animationFrames[frameIndex]);
 }

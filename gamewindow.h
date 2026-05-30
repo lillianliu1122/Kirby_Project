@@ -66,6 +66,7 @@ private:
     void drawGame(QPainter &painter);
     void drawStartMenu(QPainter &painter);
     void drawGameOver(QPainter &painter);
+    void drawStageClear(QPainter &painter);
 
     QVector<Portal> portals;
     void checkPortal();

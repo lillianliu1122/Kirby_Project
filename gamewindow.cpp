@@ -58,6 +58,20 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                 // 2. 檢查怪物是否離開鏡頭太遠，離開就暫時移除，卡比回頭時重新生成
                 enemy->checkRespawn(cameraX, 1620);
 
+                if (HotHead* h = dynamic_cast<HotHead*>(enemy)) {
+                    // 傳入 kirby.getRect() 進行碰撞判定
+                    if (h->fireBall.hitKirby) {
+                        QRect fireRect(h->fireBall.fx, h->fireBall.fy, 24, 24);
+                        if (fireRect.intersects(kirby.getRect().toRect()) && !kirby.isInvincible) { // 在 GameWindow 這裡檢查無敵狀態
+                            if (!kirby.isInvincible) {
+                                kirby.takeDamage();
+                                if (kirby.hp <= 0) handleLifeLost();
+                                h->fireBall.active = false; // 擊中後火球消失
+                            }
+                        }
+                    }
+                }
+
                 // 身體碰撞
                 if (kirby.getRect().intersects(enemy->getCollisionBox())) {
                     if (!kirby.isInvincible) {
@@ -144,6 +158,7 @@ void GameWindow::paintEvent(QPaintEvent *event)
             break;
 
         case GameState::StageClear:
+            drawStageClear(painter);
             break;
     }
 
@@ -278,6 +293,11 @@ void GameWindow::drawGameOver(QPainter &painter)
     painter.drawPixmap(0, 0, width(), height(), bg);
 }
 
+void GameWindow::drawStageClear(QPainter &painter)
+{
+    QPixmap bg(":/Image/background/cleared.png");
+    painter.drawPixmap(0, 0, width(), height(), bg);
+}
 
 void GameWindow::keyPressEvent(QKeyEvent *event)
 {
@@ -542,7 +562,7 @@ void GameWindow::initStageEnemies(int stage) {
         // frame 1 (x：0-1620)
         enemies.push_back(new WaddleDee(650, 700, 200));
         enemies.push_back(new Gordo(1000, 550, 150));
-        //enemies.push_back(new WaddleDee(1400, 700, 200));
+        enemies.push_back(new WaddleDee(1400, 700, 200));
         // frame 2 (x：1621-3240)
         enemies.push_back(new Gordo(2100, 550, 150));
         enemies.push_back(new WaddleDee(2400, 800, 200));
@@ -558,15 +578,13 @@ void GameWindow::initStageEnemies(int stage) {
         t.y = 715;
         t.isActive = true;
         tomatoes.push_back(t);
-
-        // debug用，之後要刪除
-        enemies.push_back(new Sparky(1400, 700));
     }
     else if (stage == 2) {
         // Stage 2：加入噴火怪和電電怪
-        enemies.push_back(new WaddleDee(400, 800, 100));
-        enemies.push_back(new HotHead(900, 800));    // 第一格
-        enemies.push_back(new Sparky(1800, 800));    // 第二格
+        //enemies.push_back(new WaddleDee(400, 800, 100));
+        enemies.push_back(new HotHead(1080, 800, 200, &platforms));
+        enemies.push_back(new WaddleDee(1620, 800, 200));
+        enemies.push_back(new Sparky(1500, 800, 150));
         enemies.push_back(new Gordo(2400, 400, 150));
         // 1UP
         OneUp up1;

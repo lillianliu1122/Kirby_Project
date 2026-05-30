@@ -117,5 +117,6 @@
         <file>Image/background/Stage2(8).png</file>
         <file>Image/background/Stage1(bg).png</file>
         <file>Image/background/Stage2(bg).png</file>
+        <file>Image/background/cleared.png</file>
     </qresource>
 </RCC>

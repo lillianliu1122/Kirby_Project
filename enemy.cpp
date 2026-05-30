@@ -11,20 +11,27 @@ Enemy::Enemy(int startX, int startY, QString type, QString cap, bool inhale)
 
 // 在 enemy.cpp 中，加入基底類別的碰撞檢測邏輯
 void Enemy::checkWallCollision(const QVector<Platform>& platforms) {
-    QRect enemyRect = getCollisionBox(); // 獲取當前怪物的矩形
+    QRect enemyRect = getCollisionBox(); // 獲取當前矩形
 
     for (const auto &p : platforms) {
         if (!p.visible) continue;
         QRect pRect = p.getRect().toRect();
 
+        // 必須確保只有在碰撞時才進行處理
         if (enemyRect.intersects(pRect)) {
-            // 偵測到碰撞，根據 vx 進行反彈
-            if (vx > 0) { // 往右撞牆
-                x = pRect.left() - width-5;
-                vx = -vx; // 回頭
-            } else if (vx < 0) { // 往左撞牆
-                x = pRect.right()+5;
-                vx = -vx; // 回頭
+            // 計算兩個矩形重疊的區域
+            QRect overlap = enemyRect.intersected(pRect);
+
+            // 核心邏輯：透過重疊區域判斷是水平碰撞還是垂直碰撞
+            // 如果寬度小於高度，代表它是從側面撞進去的 (水平碰撞)
+            if (overlap.width() < overlap.height()) {
+                if (vx > 0) { // 原本往右
+                    x -= overlap.width(); // 修正位置，移出牆面
+                    vx = -vx;             // 反彈
+                } else if (vx < 0) { // 原本往左
+                    x += overlap.width(); // 修正位置，移出牆面
+                    vx = -vx;             // 反彈
+                }
             }
         }
     }
