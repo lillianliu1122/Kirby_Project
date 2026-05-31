@@ -45,10 +45,20 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
             break;
 
         case GameState::Playing:
-            kirby.update(keysHeld);
+            kirby.update(keysHeld, keysJustPressed);
             checkCollisions();
             checkSlopeCollisions();
             checkPortal();
+            checkInhale();
+
+            // 生成星星彈
+            if (kirby.wantsToSpitStar) {
+                kirby.wantsToSpitStar = false;
+                float starX = kirby.facingRight ? kirby.x + kirby.KIRBY_W : kirby.x - 60;
+                float starY = kirby.y + kirby.KIRBY_H / 2.0f - 30;
+                starBullets.append(StarBullet(starX, starY, kirby.facingRight));
+            }
+            updateStarBullets(cameraX);
 
             // 敵人行為更新與戰鬥判定區塊
             for (Enemy* enemy : enemies) {
@@ -73,7 +83,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                 }
 
                 // 身體碰撞
-                if (kirby.getRect().intersects(enemy->getCollisionBox())) {
+                if (!enemy->getIsDead() && kirby.getRect().intersects(enemy->getCollisionBox())) {
                     if (!kirby.isInvincible) {
                         kirby.takeDamage();
                         if (kirby.hp <= 0) handleLifeLost();
@@ -136,6 +146,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
             break;
     }
 
+    keysJustPressed.clear();
     update();
 }
 
@@ -225,7 +236,12 @@ void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
 
     painter.translate(cameraX, 0);  // 畫完怪物後移回畫布
 
-    // 5. 畫kirby
+    // 5. 畫星星彈
+    for (auto &s : starBullets) {
+        s.draw(painter, cameraX);
+    }
+
+    // 6. 畫kirby
     kirby.draw(painter, cameraX);
 
     // 畫slope
@@ -301,6 +317,9 @@ void GameWindow::drawStageClear(QPainter &painter)
 
 void GameWindow::keyPressEvent(QKeyEvent *event)
 {
+    if (!event->isAutoRepeat()) {
+        keysJustPressed.insert(event->key());
+    }
     keysHeld.insert(event->key());
 
     switch (gameState) {
@@ -616,3 +635,80 @@ void GameWindow::handleLifeLost() {
     }
 }
 
+
+void GameWindow::checkInhale()
+{
+    if (!kirby.isInhaling()) return;
+
+    QRectF inhaleRect = kirby.getInhaleRect();
+
+    for (auto e : enemies) {
+        if (e->getIsDead()) continue;
+        if (!e->canBeInhaled) continue;
+
+        QRect eRect = e->getCollisionBox();
+        if (inhaleRect.intersects(eRect)) {
+            qDebug() << "吸入成功！敵人種類：" << e->capability;
+            kirby.inhaleEnemy(e->capability);
+            e->takeDamage();
+            break;
+        }
+    }
+}
+
+void GameWindow::updateStarBullets(float cameraX)
+{
+    for (auto &s : starBullets) {
+        if (!s.active) continue;
+
+        s.update();
+
+
+        // 超出螢幕視野就消失
+        if (s.getRect().x() < cameraX - 100 || s.getRect().x() > cameraX + 1620 + 100) {
+            s.active = false;
+            continue;
+        }
+
+        // 碰到磚頭消失
+        for (auto &p : platforms) {
+            //if (p.type != PlatformType::Brick) continue;
+            if (!p.visible) continue;
+            if (s.getRect().intersects(p.getRect())) {
+                s.active = false;
+                break;
+            }
+        }
+
+        // 碰到斜坡消失
+        for (auto &s2 : slopes) {
+            float starCenterX = s.getRect().x() + s.getRect().width() / 2.0f;
+            float starBottom  = s.getRect().y() + s.getRect().height();
+
+            if (s2.containsX(starCenterX)) {
+                float slopeY = s2.getYAtX(starCenterX);
+                if (starBottom >= slopeY) {
+                    s.active = false;
+                    break;
+                }
+            }
+        }
+        // 碰到敵人消失（Gordo 除外）
+        for (auto e : enemies) {
+            if (e->getIsDead()) continue;
+            if (e->type == "Gordo") continue;  // Gordo 不受影響
+            if (s.getRect().intersects(e->getCollisionBox())) {
+                s.active = false;
+                e->takeDamage();
+                break;
+            }
+        }
+    }
+
+    // 清除已消失的星星彈
+    starBullets.erase(
+        std::remove_if(starBullets.begin(), starBullets.end(),
+                       [](const StarBullet &s) { return !s.active; }),
+        starBullets.end()
+    );
+}

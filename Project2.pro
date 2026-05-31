@@ -19,6 +19,7 @@ SOURCES += \
     portal.cpp \
     slopeplatform.cpp \
     sparky.cpp \
+    starbullet.cpp \
     waddledee.cpp
 
 HEADERS += \
@@ -32,6 +33,7 @@ HEADERS += \
     portal.h \
     slopeplatform.h \
     sparky.h \
+    starbullet.h \
     waddledee.h
 
 FORMS += \

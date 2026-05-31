@@ -118,5 +118,7 @@
         <file>Image/background/Stage1(bg).png</file>
         <file>Image/background/Stage2(bg).png</file>
         <file>Image/background/cleared.png</file>
+        <file>Image/Kirby_normal/kirby_mouthful_stop_L.png</file>
+        <file>Image/Kirby_normal/kirby_mouthful_stop_R.png</file>
     </qresource>
 </RCC>

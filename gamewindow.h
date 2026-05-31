@@ -14,7 +14,7 @@
 #include "item.h"
 #include <vector>
 #include "slopeplatform.h"
-
+#include "starbullet.h"
 
 enum class GameState {
     StartMenu,   // 開始畫面
@@ -75,6 +75,10 @@ private:
 
     int gameOverOption = 0; // 0 表示 Continue, 1 表示 Quit
 
+    void checkInhale();
+    QSet<int> keysJustPressed;
+    QVector<StarBullet> starBullets;
+    void updateStarBullets(float cameraX);
 
 };
 

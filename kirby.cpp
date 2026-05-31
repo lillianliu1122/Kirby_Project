@@ -2,6 +2,7 @@
 #include <QSet>
 #include <QPainter>
 #include <Qt>
+#include <QDebug>
 
 const float Kirby::SPEED      = 5.0f;
 const float Kirby::JUMP_FORCE = -15.0f;
@@ -15,7 +16,7 @@ Kirby::Kirby()
     : x(100), y(600), vx(0), vy(0),
       onGround(false), facingRight(true),
       state(KirbyState::Idle), animFrame(0), animCounter(0),
-      isFlying(false), flyCount(0)
+      isFlying(false), flyCount(0), isMouthful(false), inhaledType(""), wantsToSpitStar(false)
 {
     loadImages();
 }
@@ -50,11 +51,51 @@ void Kirby::loadImages()
              << QPixmap(":/Image/Kirby_normal/kirby_fly_2_R.png");
     imgFly_L << QPixmap(":/Image/Kirby_normal/kirby_fly_1_L.png")
              << QPixmap(":/Image/Kirby_normal/kirby_fly_2_L.png");
-}
 
-void Kirby::update(const QSet<int> &keys)
+    // 吸入動作
+    imgInhale_R << QPixmap(":/Image/Kirby_normal/kirby_attack_R.png");
+    imgInhale_L << QPixmap(":/Image/Kirby_normal/kirby_attack_L.png");
+
+    // 吸滿（Mouthful）
+    imgMouthful_R << QPixmap(":/Image/Kirby_normal/kirby_mouthful_stop_R.png");
+    imgMouthful_L << QPixmap(":/Image/Kirby_normal/kirby_mouthful_stop_L.png");
+
+}
+void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
 {
     updateInvincible();
+
+    // === 最優先：Mouthful 狀態 ===
+    if (isMouthful) {
+        state = KirbyState::Mouthful;
+
+        // 可以左右移動
+        if (keys.contains(Qt::Key_Left)) {
+            vx = -SPEED;
+            facingRight = false;
+        } else if (keys.contains(Qt::Key_Right)) {
+            vx = SPEED;
+            facingRight = true;
+        } else {
+            vx = 0;
+        }
+
+        // 不能跳躍飛行，只套用重力
+        vy += GRAVITY;
+        x += vx;
+        y += vy;
+
+        if (justPressed.contains(Qt::Key_Down)) {
+            swallow();
+        } else if (justPressed.contains(Qt::Key_X)) {
+            spitStar();
+        }
+
+        updateAnimation();
+        return;  // 直接結束，跳過所有跳躍飛行邏輯
+    }
+
+    // === 以下是正常狀態邏輯 ===
     // 左右移動
     if (keys.contains(Qt::Key_Left)) {
         vx = -SPEED;
@@ -66,63 +107,43 @@ void Kirby::update(const QSet<int> &keys)
         vx = 0;
     }
 
-    // 蹲下（只有在地上才能蹲）
+    // 蹲下 / 跳躍 / 飛行
     if (keys.contains(Qt::Key_Down) && onGround) {
         state = KirbyState::Crouch;
         vx = 0;
-    }
-    // 跳躍或飛行
-    else if (keys.contains(Qt::Key_Up)) {
+    } else if (keys.contains(Qt::Key_Up)) {
         if (onGround) {
-            // 地上按 Up → 跳躍
             vy = JUMP_FORCE;
             onGround = false;
             isFlying = false;
             flyCount = 0;
         } else if (!isFlying) {
-            // 空中第一次按 Up → 開始飛行
             isFlying = true;
-            vy = -8.0f;   // 向上推力
+            vy = -8.0f;
         } else {
-            // 飛行中持續按住 Up → 維持緩慢上升
             vy = -4.0f;
         }
     } else {
-        // 放開 Up → 停止飛行推力，自然下落
-        if (isFlying) {
-            isFlying = false;
-        }
+        if (isFlying) isFlying = false;
     }
 
-    // 重力（飛行時重力減半，讓下落更緩）
+    // 重力
     if (isFlying) {
         vy += GRAVITY * 0.5f;
     } else {
         vy += GRAVITY;
     }
-
-    // 限制飛行時最大下落速度
     if (isFlying && vy > 3.0f) vy = 3.0f;
 
     // 更新位置
     x += vx;
     y += vy;
 
-    /* 暫時地板
-    if (y >= 850) {
-        y = 850;
-        vy = 0;
-        onGround = true;
-        isFlying = false;
-    }*/
-
-    // 更新動作狀態
-    if (!onGround) {
-        if (isFlying) {
-            state = KirbyState::Fly;
-        } else {
-            state = KirbyState::Jump;
-        }
+    // 狀態更新
+    if (keys.contains(Qt::Key_X)) {
+        state = KirbyState::Inhaling;
+    } else if (!onGround) {
+        state = isFlying ? KirbyState::Fly : KirbyState::Jump;
     } else if (keys.contains(Qt::Key_Down)) {
         state = KirbyState::Crouch;
     } else if (vx != 0) {
@@ -166,6 +187,10 @@ QPixmap Kirby::currentFrame() const
             return facingRight ? imgCrouch_R[0] : imgCrouch_L[0];
         case KirbyState::Fly:
             return facingRight ? imgFly_R[animFrame] : imgFly_L[animFrame];
+        case KirbyState::Inhaling:
+            return facingRight ? imgInhale_R[0] : imgInhale_L[0];
+        case KirbyState::Mouthful:
+            return facingRight ? imgMouthful_R[0] : imgMouthful_L[0];
         default: // Idle
             return facingRight ? imgIdle_R[0] : imgIdle_L[0];
     }
@@ -227,4 +252,44 @@ void Kirby::updateInvincible() {
             isInvincible = false;
         }
     }
+}
+
+bool Kirby::isInhaling() const
+{
+    return state == KirbyState::Inhaling;
+}
+
+QRectF Kirby::getInhaleRect() const
+{
+    // 吸力範圍：在 Kirby 前方約一個身長
+    if (facingRight)
+        return QRectF(x + KIRBY_W, y, KIRBY_W * 2, KIRBY_H);
+    else
+        return QRectF(x - KIRBY_W * 2, y, KIRBY_W * 2, KIRBY_H);
+}
+
+void Kirby::inhaleEnemy(QString enemyType)
+{
+    isMouthful = true;
+    inhaledType = enemyType;
+    state = KirbyState::Mouthful;
+}
+
+void Kirby::swallow()
+{
+    if (!isMouthful) return;
+    // 依敵人種類決定能力（之後接能力系統）
+    isMouthful = false;
+    inhaledType = "";
+    state = KirbyState::Idle;
+}
+
+void Kirby::spitStar()
+{
+    if (!isMouthful) return;
+    isMouthful = false;
+    inhaledType = "";
+    state = KirbyState::Idle;
+    wantsToSpitStar = true;  // 通知 GameWindow
+    // 星星彈的生成交給 GameWindow 處理
 }
