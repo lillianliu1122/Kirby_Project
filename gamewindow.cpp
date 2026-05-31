@@ -696,7 +696,7 @@ void GameWindow::updateStarBullets(float cameraX)
         // 碰到敵人消失（Gordo 除外）
         for (auto e : enemies) {
             if (e->getIsDead()) continue;
-            if (e->type == "Gordo") continue;  // Gordo 不受影響
+            //if (e->type == "Gordo") continue;  // Gordo 不受影響
             if (s.getRect().intersects(e->getCollisionBox())) {
                 s.active = false;
                 e->takeDamage();

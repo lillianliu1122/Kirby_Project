@@ -17,6 +17,11 @@ enum class KirbyState {
     Mouthful    // 已吸入敵人
 };
 
+enum class KirbyAbility {
+    None,
+    Fire,
+    Spark
+};
 
 class Kirby
 {
@@ -51,6 +56,12 @@ public:
     void spitStar();   // 吐出星星
     void swallow();    // 吞下
     bool wantsToSpitStar;  // 通知 GameWindow 要生成星星彈
+    KirbyAbility ability;
+    bool isUsingAbility;    // 正在使用能力中
+    void useAbility();      // 按 X 使用能力
+    void dropAbility();     // 按 V 棄置能力
+    bool wantsFireAttack;   // 通知 GameWindow 產生火焰
+    bool wantsSparkAttack;  // 通知 GameWindow 產生電流
 
 private:
     void loadImages();
@@ -67,6 +78,20 @@ private:
     QVector<QPixmap> imgFly_L, imgFly_R;
     QVector<QPixmap> imgInhale_L, imgInhale_R;
     QVector<QPixmap> imgMouthful_L, imgMouthful_R;
+
+    // Fire 能力圖片
+    QVector<QPixmap> imgFire_stop_L, imgFire_stop_R;
+    QVector<QPixmap> imgFire_run_L,  imgFire_run_R;
+    QVector<QPixmap> imgFire_fly_L,  imgFire_fly_R;
+    QVector<QPixmap> imgFire_atk_L,  imgFire_atk_R;
+    QVector<QPixmap> imgFire_down_L,  imgFire_down_R;
+
+    // Spark 能力圖片
+    QVector<QPixmap> imgSpark_stop_L, imgSpark_stop_R;
+    QVector<QPixmap> imgSpark_run_L,  imgSpark_run_R;
+    QVector<QPixmap> imgSpark_fly_L,  imgSpark_fly_R;
+    QVector<QPixmap> imgSpark_atk;
+    QVector<QPixmap> imgSpark_down_L, imgSpark_down_R;
 
     int animFrame;    // 目前播到第幾張
     int animCounter;  // 計數器，控制換圖速度

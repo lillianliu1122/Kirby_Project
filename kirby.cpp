@@ -19,6 +19,10 @@ Kirby::Kirby()
       isFlying(false), flyCount(0), isMouthful(false), inhaledType(""), wantsToSpitStar(false)
 {
     loadImages();
+    ability = KirbyAbility::None;
+    isUsingAbility = false;
+    wantsFireAttack = false;
+    wantsSparkAttack = false;
 }
 
 void Kirby::loadImages()
@@ -59,6 +63,45 @@ void Kirby::loadImages()
     // 吸滿（Mouthful）
     imgMouthful_R << QPixmap(":/Image/Kirby_normal/kirby_mouthful_stop_R.png");
     imgMouthful_L << QPixmap(":/Image/Kirby_normal/kirby_mouthful_stop_L.png");
+
+    // Fire
+    imgFire_stop_R << QPixmap(":/Image/Kirby_fire/kirbyfire_stop_R.png");
+    imgFire_stop_L << QPixmap(":/Image/Kirby_fire/kirbyfire_stop_L.png");
+    imgFire_run_R  << QPixmap(":/Image/Kirby_fire/kirbyfire_run(1)_R.png")
+                   << QPixmap(":/Image/Kirby_fire/kirbyfire_run(2)_R.png")
+                   << QPixmap(":/Image/Kirby_fire/kirbyfire_run(3)_R.png");
+    imgFire_run_L  << QPixmap(":/Image/Kirby_fire/kirbyfire_run(1)_L.png")
+                   << QPixmap(":/Image/Kirby_fire/kirbyfire_run(2)_L.png")
+                   << QPixmap(":/Image/Kirby_fire/kirbyfire_run(3)_L.png");
+    imgFire_fly_R  << QPixmap(":/Image/Kirby_fire/kirbyfire_fly(1)_R.png")
+                   << QPixmap(":/Image/Kirby_fire/kirbyfire_fly(2)_R.png");
+    imgFire_fly_L  << QPixmap(":/Image/Kirby_fire/kirbyfire_fly(1)_L.png")
+                   << QPixmap(":/Image/Kirby_fire/kirbyfire_fly(2)_L.png");
+    imgFire_atk_R  << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(1)_R.png")
+                   << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(2)_R.png")
+                   << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(3)_R.png");
+    imgFire_atk_L  << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(1)_L.png")
+                   << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(2)_L.png")
+                   << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(3)_L.png");
+    imgFire_down_R << QPixmap(":/Image/Kirby_fire/kirbyfire_down_R.png");
+    imgFire_down_L << QPixmap(":/Image/Kirby_fire/kirbyfire_down_L.png");
+
+    // Spark
+    imgSpark_stop_R << QPixmap(":/Image/Kirby_spark/Kirby_spark_stop_R.png");
+    imgSpark_stop_L << QPixmap(":/Image/Kirby_spark/Kirby_spark_stop_L.png");
+    imgSpark_run_R  << QPixmap(":/Image/Kirby_spark/Kirby_spark_run(1)_R.png")
+                    << QPixmap(":/Image/Kirby_spark/Kirby_spark_run(2)_R.png");
+    imgSpark_run_L  << QPixmap(":/Image/Kirby_spark/Kirby_spark_run(1)_L.png")
+                    << QPixmap(":/Image/Kirby_spark/Kirby_spark_run(2)_L.png");
+    imgSpark_fly_R  << QPixmap(":/Image/Kirby_spark/Kirby_spark_fly(1)_R.png")
+                    << QPixmap(":/Image/Kirby_spark/Kirby_spark_fly(2)_R.png");
+    imgSpark_fly_L  << QPixmap(":/Image/Kirby_spark/Kirby_spark_fly(1)_L.png")
+                    << QPixmap(":/Image/Kirby_spark/Kirby_spark_fly(2)_L.png");
+    imgSpark_atk    << QPixmap(":/Image/Kirby_spark/Kirby_spark_attack(1).png")
+                    << QPixmap(":/Image/Kirby_spark/Kirby_spark_attack(2).png")
+                    << QPixmap(":/Image/Kirby_spark/Kirby_spark_attack(3).png");
+    imgSpark_down_R << QPixmap(":/Image/Kirby_spark/Kirby_spark_down_R.png");
+    imgSpark_down_L << QPixmap(":/Image/Kirby_spark/Kirby_spark_down_L.png");
 
 }
 void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
@@ -152,6 +195,16 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
         state = KirbyState::Idle;
     }
 
+    // 使用能力（按 X，有能力時）
+    if (justPressed.contains(Qt::Key_X) && ability != KirbyAbility::None) {
+        useAbility();
+    }
+
+    // 棄置能力（按 V）
+    if (justPressed.contains(Qt::Key_V)) {
+        dropAbility();
+    }
+
     updateAnimation();
 }
 
@@ -178,6 +231,44 @@ void Kirby::updateAnimation()
 
 QPixmap Kirby::currentFrame() const
 {
+    // Fire 能力
+    if (ability == KirbyAbility::Fire) {
+        if (isUsingAbility)
+            return facingRight ? imgFire_atk_R[animFrame % imgFire_atk_R.size()]
+                               : imgFire_atk_L[animFrame % imgFire_atk_L.size()];
+        switch (state) {
+            case KirbyState::Run:
+                return facingRight ? imgFire_run_R[animFrame % imgFire_run_R.size()]
+                                   : imgFire_run_L[animFrame % imgFire_run_L.size()];
+            case KirbyState::Fly: case KirbyState::Jump:
+                return facingRight ? imgFire_fly_R[animFrame % imgFire_fly_R.size()]
+                                   : imgFire_fly_L[animFrame % imgFire_fly_L.size()];
+            case KirbyState::Crouch:
+                return facingRight ? imgFire_down_R[0] : imgFire_down_L[0];
+            default:
+                return facingRight ? imgFire_stop_R[0] : imgFire_stop_L[0];
+        }
+    }
+
+    // Spark 能力
+    if (ability == KirbyAbility::Spark) {
+        if (isUsingAbility)
+            return imgSpark_atk[animFrame % imgSpark_atk.size()];
+        switch (state) {
+            case KirbyState::Run:
+                return facingRight ? imgSpark_run_R[animFrame % imgSpark_run_R.size()]
+                                   : imgSpark_run_L[animFrame % imgSpark_run_L.size()];
+            case KirbyState::Fly: case KirbyState::Jump:
+                return facingRight ? imgSpark_fly_R[animFrame % imgSpark_fly_R.size()]
+                                   : imgSpark_fly_L[animFrame % imgSpark_fly_L.size()];
+            case KirbyState::Crouch:
+                return facingRight ? imgSpark_down_R[0] : imgSpark_down_L[0];
+            default:
+                return facingRight ? imgSpark_stop_R[0] : imgSpark_stop_L[0];
+        }
+    }
+
+    // 原本的 Normal 狀態（不變）
     switch (state) {
         case KirbyState::Run:
             return facingRight ? imgRun_R[animFrame] : imgRun_L[animFrame];
@@ -191,7 +282,7 @@ QPixmap Kirby::currentFrame() const
             return facingRight ? imgInhale_R[0] : imgInhale_L[0];
         case KirbyState::Mouthful:
             return facingRight ? imgMouthful_R[0] : imgMouthful_L[0];
-        default: // Idle
+        default:
             return facingRight ? imgIdle_R[0] : imgIdle_L[0];
     }
 }
@@ -206,14 +297,23 @@ void Kirby::draw(QPainter &painter, float cameraX)
     QPixmap frame = currentFrame();
     int drawX = (int)(x - cameraX);  // 套用攝影機偏移
 
+    // Fire 能力時高度加大，讓火焰不被裁切
+    int drawW = KIRBY_W;
+    int drawH = KIRBY_H;
+    int drawY = (int)y;
+
+    if (ability == KirbyAbility::Fire) {
+        drawH = KIRBY_H * 2.0f;
+        drawW = KIRBY_W * 2.0f;
+        drawY = (int)y - (drawH - KIRBY_H);  // 向上延伸，底部對齊不變
+    }
+
     if (!frame.isNull()) {
         // 蹲下時用原始圖片比例，其他動作維持 50x50 ()
-        //kirby_down 這張圖比較矮
         if (state == KirbyState::Crouch) {
-            // 蹲下：貼齊地板底部
-            painter.drawPixmap(drawX, (int)y + 4*(KIRBY_H - KIRBY_CH), KIRBY_W, KIRBY_CH, frame);
+            painter.drawPixmap(drawX, drawY + 4*(KIRBY_H - KIRBY_CH), drawW, KIRBY_CH, frame);
         } else {
-            painter.drawPixmap(drawX, (int)y, KIRBY_W, KIRBY_H, frame);
+            painter.drawPixmap(drawX, drawY, drawW, drawH, frame);
         }
     } else {
         // 圖片載入失敗時顯示粉紅色方塊（debug 用）
@@ -278,7 +378,13 @@ void Kirby::inhaleEnemy(QString enemyType)
 void Kirby::swallow()
 {
     if (!isMouthful) return;
-    // 依敵人種類決定能力（之後接能力系統）
+    if (inhaledType == "Fire") {
+        ability = KirbyAbility::Fire;
+    } else if (inhaledType == "Spark") {
+        ability = KirbyAbility::Spark;
+    } else {
+        ability = KirbyAbility::None;
+    }
     isMouthful = false;
     inhaledType = "";
     state = KirbyState::Idle;
@@ -292,4 +398,22 @@ void Kirby::spitStar()
     state = KirbyState::Idle;
     wantsToSpitStar = true;  // 通知 GameWindow
     // 星星彈的生成交給 GameWindow 處理
+}
+
+void Kirby::useAbility()
+{
+    if (isUsingAbility) return;
+    if (ability == KirbyAbility::Fire) {
+        isUsingAbility = true;
+        wantsFireAttack = true;
+    } else if (ability == KirbyAbility::Spark) {
+        isUsingAbility = true;
+        wantsSparkAttack = true;
+    }
+}
+
+void Kirby::dropAbility()
+{
+    ability = KirbyAbility::None;
+    isUsingAbility = false;
 }
