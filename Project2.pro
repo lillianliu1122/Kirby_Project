@@ -10,6 +10,7 @@ CONFIG += c++11
 
 SOURCES += \
     enemy.cpp \
+    fireattack.cpp \
     gordo.cpp \
     hothead.cpp \
     kirby.cpp \
@@ -24,6 +25,7 @@ SOURCES += \
 
 HEADERS += \
     enemy.h \
+    fireattack.h \
     gamewindow.h \
     gordo.h \
     hothead.h \

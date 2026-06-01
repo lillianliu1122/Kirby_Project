@@ -22,12 +22,12 @@ GameWindow::GameWindow(QWidget *parent)
 
     cameraX = 0;
 
-    currentStage = 1;
-    loadStage1();
+    //currentStage = 1;
+    //loadStage1();
     loadBackground();
 
-    //currentStage = 2; //暫時
-    //loadStage2();
+    currentStage = 2; //暫時
+    loadStage2();
 
     portals.append(Portal(4650, 550, PortalType::ToStage2));  // Stage1 終點
 }
@@ -46,10 +46,17 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
 
         case GameState::Playing:
             kirby.update(keysHeld, keysJustPressed);
+
+            // Fire 能力使用中不能移動
+            if (kirby.ability == KirbyAbility::Fire && keysHeld.contains(Qt::Key_X)) {
+                kirby.vx = 0;
+            }
+
             checkCollisions();
             checkSlopeCollisions();
             checkPortal();
             checkInhale();
+            updateFireAttack();
 
             // 生成星星彈
             if (kirby.wantsToSpitStar) {
@@ -69,14 +76,27 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                 enemy->checkRespawn(cameraX, 1620);
 
                 if (HotHead* h = dynamic_cast<HotHead*>(enemy)) {
-                    // 傳入 kirby.getRect() 進行碰撞判定
-                    if (h->fireBall.hitKirby) {
-                        QRect fireRect(h->fireBall.fx, h->fireBall.fy, 24, 24);
-                        if (fireRect.intersects(kirby.getRect().toRect()) && !kirby.isInvincible) { // 在 GameWindow 這裡檢查無敵狀態
+                    h->updateFireBall(kirby.x, kirby.y, kirby.getRect().toRect(), platforms, slopes);
+
+                    // ✅ 加這個檢查，死亡後跳過所有傷害判定
+                    if (!h->getIsDead()) {
+                        // 火球傷害
+                        if (h->fireBall.hitKirby) {
                             if (!kirby.isInvincible) {
                                 kirby.takeDamage();
                                 if (kirby.hp <= 0) handleLifeLost();
-                                h->fireBall.active = false; // 擊中後火球消失
+                            }
+                            h->fireBall.hitKirby = false;
+                        }
+
+                        // 火焰傷害
+                        if (h->isFlaming()) {
+                            QRect flameRect = h->getFlameRect();
+                            if (flameRect.intersects(kirby.getRect().toRect())) {
+                                if (!kirby.isInvincible) {
+                                    kirby.takeDamage();
+                                    if (kirby.hp <= 0) handleLifeLost();
+                                }
                             }
                         }
                     }
@@ -103,8 +123,6 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                         }
                     }
                 }
-
-
             }
 
             // tomato碰撞
@@ -226,7 +244,7 @@ void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
         p.draw(painter, cameraX);
     }
 
-    // 敵人繪製區塊
+    // 5. 畫敵人
     // 將畫布往左偏移，確保怪物座標與捲軸鏡頭對齊
     painter.translate(-cameraX, 0);
 
@@ -236,12 +254,15 @@ void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
 
     painter.translate(cameraX, 0);  // 畫完怪物後移回畫布
 
-    // 5. 畫星星彈
+    // 6. 畫星星彈、火焰
     for (auto &s : starBullets) {
         s.draw(painter, cameraX);
     }
+    if (currentFireAttack) {
+        currentFireAttack->draw(painter, cameraX);
+    }
 
-    // 6. 畫kirby
+    // 7. 畫kirby
     kirby.draw(painter, cameraX);
 
     // 畫slope
@@ -600,15 +621,29 @@ void GameWindow::initStageEnemies(int stage) {
     }
     else if (stage == 2) {
         // Stage 2：加入噴火怪和電電怪
-        //enemies.push_back(new WaddleDee(400, 800, 100));
-        enemies.push_back(new HotHead(1080, 800, 200, &platforms));
-        enemies.push_back(new WaddleDee(1620, 800, 200));
-        enemies.push_back(new Sparky(1500, 800, 150));
-        enemies.push_back(new Gordo(2400, 400, 150));
+        // frame 1 (x：0-1620)
+        enemies.push_back(new WaddleDee(400, 800, 100));
+        enemies.push_back(new HotHead(900, 800, 200, &platforms));
+        enemies.push_back(new Gordo(1150, 550, 150));
+        enemies.push_back(new Sparky(1600, 800, 150));
+        // frame 2 (x：1621-3240)
+        enemies.push_back(new Gordo(2500, 650, 150));
+        enemies.push_back(new HotHead(2100, 800, 200, &platforms));
+        enemies.push_back(new WaddleDee(2000, 350, 100));
+        enemies.push_back(new Gordo(2900, 550, 150));
+        // frame 3 (x：3241-4860)
+        enemies.push_back(new Gordo(3850, 450, 150));
+        enemies.push_back(new HotHead(3300, 700, 200, &platforms));
+        // frame 4 (x：4861-6480)
+        enemies.push_back(new Gordo(5800, 475, 150));
+        enemies.push_back(new Sparky(6500, 700, 150));
+        // frame 5 (x：6481-8100)
+        enemies.push_back(new HotHead(7400, 800, 200, &platforms));
+
         // 1UP
         OneUp up1;
-        up1.x = 500; // 設定 1UP 位置
-        up1.y = 800;
+        up1.x = 650;
+        up1.y = 350;
         oneUps.push_back(up1);
     }
 }
@@ -711,4 +746,33 @@ void GameWindow::updateStarBullets(float cameraX)
                        [](const StarBullet &s) { return !s.active; }),
         starBullets.end()
     );
+}
+
+void GameWindow::updateFireAttack()
+{
+    // 按住 X 且有 Fire 能力 → 維持火焰
+    if (keysHeld.contains(Qt::Key_X) && kirby.ability == KirbyAbility::Fire) {
+        if (!currentFireAttack) {
+            currentFireAttack = new FireAttack(kirby.x, kirby.y,
+                                               kirby.facingRight,
+                                               kirby.KIRBY_W, kirby.KIRBY_H);
+        } else {
+            currentFireAttack->update(kirby.x, kirby.y, kirby.facingRight);
+        }
+
+        // 判斷碰到敵人
+        for (auto e : enemies) {
+            if (e->getIsDead()) continue;
+            if (e->type == "Gordo") continue;
+            if (currentFireAttack->getRect().intersects(e->getCollisionBox())) {
+                e->takeDamage();
+            }
+        }
+    } else {
+        // 放開 X → 火焰消失
+        if (currentFireAttack) {
+            delete currentFireAttack;
+            currentFireAttack = nullptr;
+        }
+    }
 }
