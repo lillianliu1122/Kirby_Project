@@ -92,6 +92,9 @@ private:
     int fireAnimCounter = 0;
     QPixmap *fireImgs[3][2] = {};  // [frame][L/R]
 
+    bool tomatoCollected = false;  // Stage1 番茄
+    bool oneUpCollected = false;   // Stage2 1UP
+
 };
 
 #endif // GAMEWINDOW_H

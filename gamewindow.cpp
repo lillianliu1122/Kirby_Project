@@ -86,17 +86,29 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                     fireAttackActive = false; // 時間到消失
                 }
             }*/
+            // 按下 X 觸發噴火，設定持續時間
+            if (kirby.ability == KirbyAbility::Fire && keysJustPressed.contains(Qt::Key_X)) {
+                fireAttackTimer = 60; // 按下時設定 600 幀 = 1 秒
+                kirby.isUsingAbility = true;
+            }
 
-            // 火焰攻擊（按住 X 持續噴火）
+            // 按住 X 時持續重置計時器
             if (kirby.ability == KirbyAbility::Fire && keysHeld.contains(Qt::Key_X)) {
-                kirby.vx = 0;  // 禁止移動
+                fireAttackTimer = 60; // 一直按著就一直重置，不會倒數到0
+                kirby.isUsingAbility = true;
+            }
+
+            // 噴火持續中（不管有沒有按著 X）
+            if (kirby.ability == KirbyAbility::Fire && fireAttackTimer > 0) {
+                fireAttackTimer--;
+                kirby.vx = 0;
 
                 // 更新火焰動畫
-               fireAnimCounter++;
-               if (fireAnimCounter >= 6) {
-                   fireAnimCounter = 0;
-                   fireAnimFrame = (fireAnimFrame + 1) % 3;
-               }
+                fireAnimCounter++;
+                if (fireAnimCounter >= 6) {
+                    fireAnimCounter = 0;
+                    fireAnimFrame = (fireAnimFrame + 1) % 3;
+                }
 
                 float fireX = kirby.facingRight ? kirby.x + kirby.KIRBY_W : kirby.x - 168;
                 float fireY = kirby.y + (kirby.KIRBY_H - 100) / 2;
@@ -110,8 +122,8 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                         e->takeDamage();
                     }
                 }
-            } else {
-                // 放開 X 或沒有 Fire 能力 → 火焰消失
+            } else if (kirby.ability == KirbyAbility::Fire && fireAttackTimer <= 0) {
+                // 時間到，火焰消失
                 fireAttackActive = false;
                 kirby.isUsingAbility = false;
             }
@@ -121,17 +133,22 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
             // Spark 攻擊生成
             if (kirby.wantsSparkAttack) {
                 kirby.wantsSparkAttack = false;
-                // Spark 是環繞 kirby 四周的電流，所以範圍以 kirby 為中心向外擴散
-                int radius = 80;
-                sparkAttackRect = QRectF(kirby.x - radius, kirby.y - radius,
-                                         kirby.KIRBY_W + radius * 2, kirby.KIRBY_H + radius * 2);
                 sparkAttackActive = true;
-                sparkAttackTimer = 40; // 持續 40 幀，可自行調整
+                sparkAttackTimer = 40;
+                // 不在這裡設 rect，讓下面的更新區塊統一處理
             }
 
             // Spark 存在期間的判定
             if (sparkAttackActive) {
                 sparkAttackTimer--;
+
+                // 每幀更新 sparkAttackRect 跟著 kirby
+                int radius = 80;
+                sparkAttackRect = QRectF(kirby.x - radius, kirby.y - radius,
+                                         kirby.KIRBY_W + radius * 2, kirby.KIRBY_H + radius * 2);
+
+                // 禁止移動
+                kirby.vx = 0;
 
                 for (auto e : enemies) {
                     if (e->getIsDead()) continue;
@@ -143,7 +160,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
 
                 if (sparkAttackTimer <= 0) {
                     sparkAttackActive = false;
-                    kirby.isUsingAbility = false; // 攻擊結束
+                    kirby.isUsingAbility = false;
                 }
             }
 
@@ -210,6 +227,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                 if (t.isActive && kirby.getRect().intersects(t.getRect())) {
                     kirby.hp = 3;          // 補滿 HP
                     t.isActive = false;     // 番茄消失
+                    tomatoCollected = true;
                 }
             }
 
@@ -217,6 +235,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
             for (auto &life : oneUps) {
                 if (!life.isCollected && kirby.getRect().intersects(life.getRect())) {
                     life.isCollected = true; // 隱藏道具
+                    oneUpCollected = true;
                     if (kirby.lives < 3) { // 假設你希望生命值上限是 3
                         kirby.lives += 1;
                     }
@@ -517,6 +536,8 @@ void GameWindow::loadStage1()//布置platform位置
     // 磚頭
     // platforms.append(Platform(500,  700,   80, 40, PlatformType::Brick));
     initStageEnemies(1);
+
+    tomatoCollected = false;
 }
 
 void GameWindow::loadStage2()
@@ -560,6 +581,8 @@ void GameWindow::loadStage2()
     // Stage 2 終點門
     portals.append(Portal(7800, 620, PortalType::Goal));
     initStageEnemies(2);
+
+    oneUpCollected = false;
 }
 
 void GameWindow::checkCollisions()
@@ -704,11 +727,13 @@ void GameWindow::initStageEnemies(int stage) {
         enemies.push_back(new Gordo(4000, 550, 150));
         enemies.push_back(new WaddleDee(4300, 715, 100));
         // 加tomato
-        Tomato t;
-        t.x = 2680;
-        t.y = 715;
-        t.isActive = true;
-        tomatoes.push_back(t);
+        if (!tomatoCollected) {
+            Tomato t;
+            t.x = 2680;
+            t.y = 715;
+            t.isActive = true;
+            tomatoes.push_back(t);
+        }
     }
     else if (stage == 2) {
         // Stage 2：加入噴火怪和電電怪
@@ -732,10 +757,12 @@ void GameWindow::initStageEnemies(int stage) {
         enemies.push_back(new HotHead(7400, 800, 200, &platforms));
 
         // 1UP
-        OneUp up1;
-        up1.x = 650;
-        up1.y = 350;
-        oneUps.push_back(up1);
+        if (!oneUpCollected) {
+            OneUp up1;
+            up1.x = 650;
+            up1.y = 350;
+            oneUps.push_back(up1);
+        }
     }
 }
 

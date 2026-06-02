@@ -111,7 +111,6 @@ void Kirby::loadImages()
 void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
 {
     updateInvincible();
-
     // === 最優先：Mouthful 狀態 ===
     if (isMouthful) {
         state = KirbyState::Mouthful;
@@ -155,9 +154,10 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
         updateAnimation();
         return;  // 直接 return，跳過移動邏輯
     }*/
-    if (ability == KirbyAbility::Fire && keys.contains(Qt::Key_X)) {
-    /*
-        if (ability == KirbyAbility::Fire) {
+
+    if (ability == KirbyAbility::Fire && isUsingAbility) {
+
+        /*if (ability == KirbyAbility::Fire) {
             // Fire：按住持續，每幀都設 true
             isUsingAbility = true;
             wantsFireAttack = true;
@@ -176,8 +176,15 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
         return;
     }
 
-    // Spark 使用中：禁止移動
-    else if (ability == KirbyAbility::Spark && isUsingAbility) {
+
+    // Spark：按下瞬間觸發（移到最前面）
+    if (justPressed.contains(Qt::Key_X) && ability == KirbyAbility::Spark) {
+        isUsingAbility = true;
+        wantsSparkAttack = true;
+    }
+
+    // Spark 使用中：禁止移動（現在 isUsingAbility 已經是 true 了）
+    if (ability == KirbyAbility::Spark && isUsingAbility) {
         vx = 0;
         vy += GRAVITY;
         x += vx;
@@ -217,9 +224,9 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
         } else {
             vy = -4.0f;
         }
-    } else {
+    } /*else {
         if (isFlying) isFlying = false;
-    }
+    }*/
 
     // 重力
     if (isFlying) {
@@ -248,10 +255,16 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
     } else {
         state = KirbyState::Idle;
     }*/
+    // 按 X 解除飛行
+    if (justPressed.contains(Qt::Key_X) && isFlying && ability == KirbyAbility::None) {
+        isFlying = false;
+    }
 
     // 狀態更新
     if (keys.contains(Qt::Key_X)) {
         state = KirbyState::Inhaling;
+    } else if (isFlying) {
+        state = KirbyState::Fly;        // 只要 isFlying 就一律顯示飛行圖，不管在不在地上
     } else if (!onGround) {
         state = isFlying ? KirbyState::Fly : KirbyState::Jump;
     } else if (keys.contains(Qt::Key_Down)) {
@@ -321,12 +334,16 @@ void Kirby::updateAnimation()
             default:               maxFrames = 1; break;
         }
     } else if (ability == KirbyAbility::Spark) {
-        switch (state) {
-            case KirbyState::Run:  maxFrames = 2; break;
-            case KirbyState::Fly:
-            case KirbyState::Jump: maxFrames = 2; break;
-            case KirbyState::Inhaling: maxFrames = 3; break;
-            default:               maxFrames = 1; break;
+        if (isUsingAbility) {
+            maxFrames = 2;  // 攻擊時在 index 1, 2 之間切換，所以需要 2 幀
+        } else {
+            switch (state) {
+                case KirbyState::Run:  maxFrames = 2; break;
+                case KirbyState::Fly:
+                case KirbyState::Jump: maxFrames = 2; break;
+                case KirbyState::Inhaling: maxFrames = 3; break;
+                default:               maxFrames = 1; break;
+            }
         }
     } else {
         switch (state) {
@@ -362,8 +379,11 @@ QPixmap Kirby::currentFrame() const
 
     // Spark 能力
     if (ability == KirbyAbility::Spark) {
-        if (isUsingAbility)
-            return imgSpark_atk[animFrame % imgSpark_atk.size()];
+        if (isUsingAbility){
+            int frame = 1 + (animFrame % 2);
+            return imgSpark_atk[frame];
+            //return imgSpark_atk[animFrame % imgSpark_atk.size()];
+        }
         switch (state) {
             case KirbyState::Run:
                 return facingRight ? imgSpark_run_R[animFrame % imgSpark_run_R.size()]
@@ -442,7 +462,16 @@ void Kirby::draw(QPainter &painter, float cameraX)
         if (state == KirbyState::Crouch) {
             painter.drawPixmap(drawX, drawY + 4*(KIRBY_H - KIRBY_CH), drawW, KIRBY_CH, frame);
         }*/
-        if (state == KirbyState::Crouch) {
+        if (ability == KirbyAbility::Spark && isUsingAbility) {
+            // 電流圖片大小與判定範圍一致
+            int sparkRadius = 80;
+            int sparkW = KIRBY_W + sparkRadius * 2;  // 260
+            int sparkH = KIRBY_H + sparkRadius * 2;  // 260
+            int sparkX = drawX - sparkRadius;         // 向左偏移讓圖片置中
+            int sparkY = (int)y - sparkRadius;        // 向上偏移讓圖片置中
+            painter.drawPixmap(sparkX, sparkY, sparkW, sparkH, frame);
+        }
+        else if (state == KirbyState::Crouch) {
             if(ability != KirbyAbility::None){
                 int crouchH = FIRE_CH;
                 int crouchY = (int)y + (KIRBY_H - crouchH);
