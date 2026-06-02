@@ -64,14 +64,19 @@ void Sparky::draw(QPainter &painter) {
 
     if (isDischarging) {
         int radius = 60;
+
+        QPixmap effect(":/Image/Sparky/Sparky_attack_2.png");
+        // 將電流效果疊加在 Sparky 周圍，位置根據需要微調
+        painter.drawPixmap(x - radius, y - radius, width + (radius * 2), height + (radius * 2), effect);
+
         // 1. 發動攻擊時 (顯示 attack 圖片)
         // 這裡我們畫 attack_1 作為本體，attack_2 作為疊加的電流效果
         currentImg = QPixmap(":/Image/Sparky/Sparky_attack_1.png");
         painter.drawPixmap(x, y, width, height, QPixmap(":/Image/Sparky/Sparky_attack_1.png"));
 
-        QPixmap effect(":/Image/Sparky/Sparky_attack_2.png");
+        //QPixmap effect(":/Image/Sparky/Sparky_attack_2.png");
         // 將電流效果疊加在 Sparky 周圍，位置根據需要微調
-        painter.drawPixmap(x - radius, y - radius, width + (radius * 2), height + (radius * 2), effect);
+        //painter.drawPixmap(x - radius, y - radius, width + (radius * 2), height + (radius * 2), effect);
     }
     else {
         // 2. 移動狀態
