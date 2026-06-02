@@ -11,7 +11,7 @@ const float Kirby::GRAVITY    = 0.6f;
 const int Kirby::KIRBY_W = 100;
 const int Kirby::KIRBY_H = 100;
 const int Kirby::KIRBY_CH = 100*76/80;   // 蹲下高度（down 比例）
-const int Kirby::KIRBY_CH2 = 100*17/19;
+const int Kirby::FIRE_CH = 90;
 
 Kirby::Kirby()
     : x(100), y(600), vx(0), vy(0),
@@ -22,7 +22,7 @@ Kirby::Kirby()
     loadImages();
     ability = KirbyAbility::None;
     isUsingAbility = false;
-    //wantsFireAttack = false;
+    wantsFireAttack = false;
     wantsSparkAttack = false;
 }
 
@@ -78,8 +78,8 @@ void Kirby::loadImages()
                    << QPixmap(":/Image/Kirby_fire/kirbyfire_fly(2)_R.png");
     imgFire_fly_L  << QPixmap(":/Image/Kirby_fire/kirbyfire_fly(1)_L.png")
                    << QPixmap(":/Image/Kirby_fire/kirbyfire_fly(2)_L.png");
-    imgFire_atk_R  << QPixmap(":/Image/Kirby_fire/kirbyfire_attack_R.png");
-    imgFire_atk_L  << QPixmap(":/Image/Kirby_fire/kirbyfire_attack_L.png");
+    imgFire_atk_R << QPixmap(":/Image/Kirby_fire/kirbyfire_attack_R.png");
+    imgFire_atk_L << QPixmap(":/Image/Kirby_fire/kirbyfire_attack_L.png");
     /*imgFire_atk_R  << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(1)_R.png")
                    << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(2)_R.png")
                    << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(3)_R.png");
@@ -112,17 +112,6 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
 {
     updateInvincible();
 
-    if (ability == KirbyAbility::Fire && keys.contains(Qt::Key_X)) {
-        state = KirbyState::Inhaling;
-        vy += GRAVITY;
-        //x += vx;
-        y += vy;
-        // 棄置能力
-        if (justPressed.contains(Qt::Key_V)) dropAbility();
-        updateAnimation();
-        return;
-    }
-
     // === 最優先：Mouthful 狀態 ===
     if (isMouthful) {
         state = KirbyState::Mouthful;
@@ -153,19 +142,54 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
         return;  // 直接結束，跳過所有跳躍飛行邏輯
     }
 
-    // === 以下是正常狀態邏輯 ===
-    /* Fire 能力使用中：禁止移動
-    if (ability == KirbyAbility::Fire && keys.contains(Qt::Key_X)) {
+    /* 能力使用中：禁止移動
+    if (ability != KirbyAbility::None && keys.contains(Qt::Key_X)) {
+        useAbility();
+        //isUsingAbility = true;
         vx = 0;
         vy += GRAVITY;
-        //x += vx;
+        x += vx;
         y += vy;
-        // 棄置能力
         if (justPressed.contains(Qt::Key_V)) dropAbility();
+        state = KirbyState::Idle;  // 攻擊時維持站立狀態
+        updateAnimation();
+        return;  // 直接 return，跳過移動邏輯
+    }*/
+    if (ability == KirbyAbility::Fire && keys.contains(Qt::Key_X)) {
+    /*
+        if (ability == KirbyAbility::Fire) {
+            // Fire：按住持續，每幀都設 true
+            isUsingAbility = true;
+            wantsFireAttack = true;
+        } else if (ability == KirbyAbility::Spark) {
+            // Spark：只在 sparkAttackActive 時才鎖住不動
+            // 觸發交給 justPressed 處理
+        }*/
+
+        vx = 0;
+        vy += GRAVITY;
+        x += vx;
+        y += vy;
+        if (justPressed.contains(Qt::Key_V)) dropAbility();
+        state = KirbyState::Idle;
         updateAnimation();
         return;
-    }*/
+    }
 
+    // Spark 使用中：禁止移動
+    else if (ability == KirbyAbility::Spark && isUsingAbility) {
+        vx = 0;
+        vy += GRAVITY;
+        x += vx;
+        y += vy;
+        if (justPressed.contains(Qt::Key_V)) dropAbility();
+        state = KirbyState::Idle;
+        updateAnimation();
+        return;
+    }
+
+    // === 以下是正常狀態邏輯 ===
+    {
     // 左右移動
     if (keys.contains(Qt::Key_Left)) {
         vx = -SPEED;
@@ -208,6 +232,22 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
     // 更新位置
     x += vx;
     y += vy;
+    }
+
+    // 狀態更新
+    /*if (justPressed.contains(Qt::Key_X) && ability != KirbyAbility::None) {
+        useAbility();  // 有能力優先使用，不吸入
+    } else if (keys.contains(Qt::Key_X)) {
+        state = KirbyState::Inhaling;  // 沒能力才吸入
+    } else if (!onGround) {
+        state = isFlying ? KirbyState::Fly : KirbyState::Jump;
+    } else if (keys.contains(Qt::Key_Down)) {
+        state = KirbyState::Crouch;
+    } else if (vx != 0) {
+        state = KirbyState::Run;
+    } else {
+        state = KirbyState::Idle;
+    }*/
 
     // 狀態更新
     if (keys.contains(Qt::Key_X)) {
@@ -227,15 +267,22 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
         useAbility();
     }*/
 
+    // Spark：按下瞬間觸發
+    if (justPressed.contains(Qt::Key_X) && ability == KirbyAbility::Spark) {
+        isUsingAbility = true;
+        wantsSparkAttack = true;
+    }
     // 棄置能力（按 V）
     if (justPressed.contains(Qt::Key_V)) {
         dropAbility();
     }
 
     updateAnimation();
+
+
 }
 
-void Kirby::updateAnimation()
+/*void Kirby::updateAnimation()
 {
     animCounter++;
 
@@ -254,14 +301,51 @@ void Kirby::updateAnimation()
         default:                 maxFrames = 1; break;
     }
     if (animFrame >= maxFrames) animFrame = 0;
+}*/
+
+void Kirby::updateAnimation()
+{
+    animCounter++;
+    if (animCounter >= 8) {
+        animCounter = 0;
+        animFrame++;
+    }
+
+    int maxFrames = 1;
+
+    if (ability == KirbyAbility::Fire) {
+        switch (state) {
+            case KirbyState::Run:  maxFrames = 3; break;
+            case KirbyState::Fly:
+            case KirbyState::Jump: maxFrames = 2; break;
+            default:               maxFrames = 1; break;
+        }
+    } else if (ability == KirbyAbility::Spark) {
+        switch (state) {
+            case KirbyState::Run:  maxFrames = 2; break;
+            case KirbyState::Fly:
+            case KirbyState::Jump: maxFrames = 2; break;
+            case KirbyState::Inhaling: maxFrames = 3; break;
+            default:               maxFrames = 1; break;
+        }
+    } else {
+        switch (state) {
+            case KirbyState::Run:  maxFrames = 4; break;
+            case KirbyState::Jump: maxFrames = 3; break;
+            case KirbyState::Fly:  maxFrames = 2; break;
+            default:               maxFrames = 1; break;
+        }
+    }
+
+    if (animFrame >= maxFrames) animFrame = 0;
 }
 
 QPixmap Kirby::currentFrame() const
 {
     // Fire 能力
     if (ability == KirbyAbility::Fire) {
-        //if (isUsingAbility)
-        //    return facingRight ? imgFire_atk_R[0] : imgFire_atk_L[0];
+        if (isUsingAbility)
+            return facingRight ? imgFire_atk_R[0] : imgFire_atk_L[0];
         switch (state) {
             case KirbyState::Run:
                 return facingRight ? imgFire_run_R[animFrame % imgFire_run_R.size()]
@@ -271,8 +355,6 @@ QPixmap Kirby::currentFrame() const
                                    : imgFire_fly_L[animFrame % imgFire_fly_L.size()];
             case KirbyState::Crouch:
                 return facingRight ? imgFire_down_R[0] : imgFire_down_L[0];
-            case KirbyState::Inhaling:
-                return facingRight ? imgFire_atk_R[0] : imgFire_atk_L[0];
             default:
                 return facingRight ? imgFire_stop_R[0] : imgFire_stop_L[0];
         }
@@ -280,8 +362,8 @@ QPixmap Kirby::currentFrame() const
 
     // Spark 能力
     if (ability == KirbyAbility::Spark) {
-        //if (isUsingAbility)
-        //    return imgSpark_atk[animFrame % imgSpark_atk.size()];
+        if (isUsingAbility)
+            return imgSpark_atk[animFrame % imgSpark_atk.size()];
         switch (state) {
             case KirbyState::Run:
                 return facingRight ? imgSpark_run_R[animFrame % imgSpark_run_R.size()]
@@ -291,6 +373,8 @@ QPixmap Kirby::currentFrame() const
                                    : imgSpark_fly_L[animFrame % imgSpark_fly_L.size()];
             case KirbyState::Crouch:
                 return facingRight ? imgSpark_down_R[0] : imgSpark_down_L[0];
+            case KirbyState::Inhaling:
+                return imgSpark_atk[animFrame % imgSpark_atk.size()];
             default:
                 return facingRight ? imgSpark_stop_R[0] : imgSpark_stop_L[0];
         }
@@ -330,24 +414,43 @@ void Kirby::draw(QPainter &painter, float cameraX)
     int drawH = KIRBY_H;
     int drawY = (int)y;
 
-    if (ability == KirbyAbility::Fire || ability == KirbyAbility::Spark) {
+    // Fire 攻擊時：分開畫 kirby 本體 + 火焰
+    if (ability != KirbyAbility::None) {
         drawH = KIRBY_H * 1.5f;
         drawW = KIRBY_W * 1.0f;
-        drawY = (int)y - (drawH - KIRBY_H);  // 向上延伸，底部對齊不變
+        drawY = (int)y - (drawH - KIRBY_H);
     }
+    /*
+    if (ability == KirbyAbility::Fire && isUsingAbility) {
+        // kirby 本體用放大版
+        QPixmap kirbyFrame = facingRight ? imgFire_stop_R[0] : imgFire_stop_L[0];
+        painter.drawPixmap(drawX, drawY, drawW, drawH, kirbyFrame);
+
+        // 火焰畫在前方
+        int fireW = 168;
+        int fireH = 100;
+        int fireX = facingRight ? drawX + drawW : drawX - fireW;
+        int fireY = (int)y + (KIRBY_H - fireH) / 2;
+        int atkIdx = animFrame % imgFire_atk_R.size();
+        QPixmap fireFrame = facingRight ? imgFire_atk_R[atkIdx] : imgFire_atk_L[atkIdx];
+        painter.drawPixmap(fireX, fireY, fireW, fireH, fireFrame);
+        return;
+    }*/
 
     if (!frame.isNull()) {
-        // 蹲下時用原始圖片比例，其他動作維持 50x50 ()
+        /* 蹲下時用原始圖片比例，其他動作維持 50x50 ()
         if (state == KirbyState::Crouch) {
-            /* 之後調整
-             * int crouchH;
-            if (ability == KirbyAbility::Fire || ability == KirbyAbility::Spark)
-                crouchH = KIRBY_CH2;
-            else    crouchH = KIRBY_CH;
-
-            //painter.drawPixmap(drawX, (int)y + 4*(KIRBY_H - crouchH), drawW, crouchH, frame);
-            */
             painter.drawPixmap(drawX, drawY + 4*(KIRBY_H - KIRBY_CH), drawW, KIRBY_CH, frame);
+        }*/
+        if (state == KirbyState::Crouch) {
+            if(ability != KirbyAbility::None){
+                int crouchH = FIRE_CH;
+                int crouchY = (int)y + (KIRBY_H - crouchH);
+                painter.drawPixmap(drawX, crouchY, drawW, crouchH, frame);
+            }
+            else{
+                painter.drawPixmap(drawX, drawY + 4*(KIRBY_H - KIRBY_CH), drawW, KIRBY_CH, frame);
+            }
         }
         else {
             painter.drawPixmap(drawX, drawY, drawW, drawH, frame);
@@ -359,14 +462,11 @@ void Kirby::draw(QPainter &painter, float cameraX)
     }
 }
 
-QRectF Kirby::getRect() const //碰撞判別
+QRectF Kirby::getRect() const
 {
-    if (state == KirbyState::Crouch) {
-        return QRectF(x, y + 4*(KIRBY_H - KIRBY_CH), KIRBY_W, KIRBY_CH);
-    }
-
     return QRectF(x, y, KIRBY_W, KIRBY_H);
 }
+
 void Kirby::takeDamage() {
     // 如果已經無敵中，就不要重複扣血
     if (isInvincible) return;
@@ -445,10 +545,10 @@ void Kirby::useAbility()
     if (isUsingAbility) return;
     if (ability == KirbyAbility::Fire) {
         isUsingAbility = true;
-        //wantsFireAttack = true;
+        wantsFireAttack = true;
     } else if (ability == KirbyAbility::Spark) {
         isUsingAbility = true;
-        //wantsSparkAttack = true;
+        wantsSparkAttack = true;
     }
 }
 

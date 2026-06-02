@@ -20,7 +20,7 @@ void HotHead::updateBehavior(int kirbyX, int kirbyY) {
     int distanceX = std::abs(kirbyX - x);
     int distanceY = std::abs(kirbyY - y);
 
-    if (distanceX < 120 && distanceY < 50) {
+    if (distanceX < 168 && distanceY < 50) {
         state = FLAME_BREATH;
         vx = 0;
     }
@@ -50,6 +50,14 @@ void HotHead::updateFireBall(int kirbyX, int kirbyY, const QRect& kirbyRect, con
         fireBall.hitKirby = false;
         return;
     }
+
+    // 噴火焰時不發射火球
+    if (state == FLAME_BREATH) {
+        fireBall.active = false;
+        fireBallCooldown = 0;
+        return;
+    }
+
     if (!fireBall.active) {
         isFacingRight = (kirbyX > x);
 
@@ -119,9 +127,9 @@ void HotHead::updatePatrol() {
 
 QRect HotHead::getFlameRect() const {
     if (state != FLAME_BREATH) return QRect(); // 不在噴火狀態回空的
-    // 火焰在身體旁邊，寬80高跟身體一樣
-    int flameX = isFacingRight ? (x + width) : (x - 80);
-    return QRect(flameX, y, 80, height);
+    int flameW = 168; // 火焰寬度
+    int flameX = isFacingRight ? (x + width) : (x - flameW);
+    return QRect(flameX, y, flameW, height);
 }
 
 void HotHead::updateFlameBreath() {
@@ -153,7 +161,7 @@ void HotHead::draw(QPainter &painter) {
     if (state == FLAME_BREATH) {
         QString breathImg = isFacingRight ? ":/Image/Hot Head/Hot_head_fire(2)_R.png"
                                           : ":/Image/Hot Head/Hot_head_fire(2)_L.png";
-        painter.drawPixmap(isFacingRight ? x + width : x - 80, y, 80, height, QPixmap(breathImg));
+        painter.drawPixmap(isFacingRight ? x + width : x - 168, y, 168, height, QPixmap(breathImg));
     }
 
     if (fireBall.active) {

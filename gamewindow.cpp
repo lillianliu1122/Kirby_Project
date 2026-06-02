@@ -46,17 +46,10 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
 
         case GameState::Playing:
             kirby.update(keysHeld, keysJustPressed);
-
-            // Fire 能力使用中不能移動
-            if (kirby.ability == KirbyAbility::Fire && keysHeld.contains(Qt::Key_X)) {
-                kirby.vx = 0;
-            }
-
             checkCollisions();
             checkSlopeCollisions();
             checkPortal();
             checkInhale();
-            updateFireAttack();
 
             // 生成星星彈
             if (kirby.wantsToSpitStar) {
@@ -66,6 +59,93 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                 starBullets.append(StarBullet(starX, starY, kirby.facingRight));
             }
             updateStarBullets(cameraX);
+
+            /* 火焰生成
+            if (kirby.wantsFireAttack) {
+                kirby.wantsFireAttack = false;
+                float fireX = kirby.facingRight ? kirby.x + kirby.KIRBY_W * 2 : kirby.x - 168;
+                float fireY = kirby.y + (kirby.KIRBY_H - 100) / 2;
+                fireAttackRect = QRectF(fireX, fireY, 168, 100);
+                fireAttackActive = true;
+                fireAttackTimer = 60; // 持續 60 幀（約 1 秒），可自行調整
+            }
+
+            // 火焰存在期間的判定
+            if (fireAttackActive) {
+                fireAttackTimer--;
+
+                for (auto e : enemies) {
+                    if (e->getIsDead()) continue;
+                    if (fireAttackRect.intersects(e->getCollisionBox())) {
+                        e->takeDamage();
+                        break;
+                    }
+                }
+
+                if (fireAttackTimer <= 0) {
+                    fireAttackActive = false; // 時間到消失
+                }
+            }*/
+
+            // 火焰攻擊（按住 X 持續噴火）
+            if (kirby.ability == KirbyAbility::Fire && keysHeld.contains(Qt::Key_X)) {
+                kirby.vx = 0;  // 禁止移動
+
+                // 更新火焰動畫
+               fireAnimCounter++;
+               if (fireAnimCounter >= 6) {
+                   fireAnimCounter = 0;
+                   fireAnimFrame = (fireAnimFrame + 1) % 3;
+               }
+
+                float fireX = kirby.facingRight ? kirby.x + kirby.KIRBY_W : kirby.x - 168;
+                float fireY = kirby.y + (kirby.KIRBY_H - 100) / 2;
+                fireAttackRect = QRectF(fireX, fireY, 168, 100);
+                fireAttackActive = true;
+
+                for (auto e : enemies) {
+                    if (e->getIsDead()) continue;
+                    if (e->type == "Gordo") continue;
+                    if (fireAttackRect.intersects(e->getCollisionBox())) {
+                        e->takeDamage();
+                    }
+                }
+            } else {
+                // 放開 X 或沒有 Fire 能力 → 火焰消失
+                fireAttackActive = false;
+                kirby.isUsingAbility = false;
+            }
+
+            // 把原本的 wantsFireAttack 和 fireAttackTimer 相關的程式碼刪掉
+
+            // Spark 攻擊生成
+            if (kirby.wantsSparkAttack) {
+                kirby.wantsSparkAttack = false;
+                // Spark 是環繞 kirby 四周的電流，所以範圍以 kirby 為中心向外擴散
+                int radius = 80;
+                sparkAttackRect = QRectF(kirby.x - radius, kirby.y - radius,
+                                         kirby.KIRBY_W + radius * 2, kirby.KIRBY_H + radius * 2);
+                sparkAttackActive = true;
+                sparkAttackTimer = 40; // 持續 40 幀，可自行調整
+            }
+
+            // Spark 存在期間的判定
+            if (sparkAttackActive) {
+                sparkAttackTimer--;
+
+                for (auto e : enemies) {
+                    if (e->getIsDead()) continue;
+                    if (sparkAttackRect.intersects(e->getCollisionBox())) {
+                        qDebug() << "Spark 消滅！敵人種類：" << e->capability;
+                        e->takeDamage();
+                    }
+                }
+
+                if (sparkAttackTimer <= 0) {
+                    sparkAttackActive = false;
+                    kirby.isUsingAbility = false; // 攻擊結束
+                }
+            }
 
             // 敵人行為更新與戰鬥判定區塊
             for (Enemy* enemy : enemies) {
@@ -244,7 +324,7 @@ void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
         p.draw(painter, cameraX);
     }
 
-    // 5. 畫敵人
+    // 敵人繪製區塊
     // 將畫布往左偏移，確保怪物座標與捲軸鏡頭對齊
     painter.translate(-cameraX, 0);
 
@@ -254,16 +334,45 @@ void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
 
     painter.translate(cameraX, 0);  // 畫完怪物後移回畫布
 
-    // 6. 畫星星彈、火焰
+    // 5. 畫星星彈
     for (auto &s : starBullets) {
         s.draw(painter, cameraX);
     }
-    if (currentFireAttack) {
-        currentFireAttack->draw(painter, cameraX);
+
+    if (fireAttackActive) {
+        // 延遲載入
+        if (!fireImgs[0][0]) {
+            fireImgs[0][0] = new QPixmap(":/Image/Kirby_fire/kirbyfire_fire(1)_L.png");
+            fireImgs[0][1] = new QPixmap(":/Image/Kirby_fire/kirbyfire_fire(1)_R.png");
+            fireImgs[1][0] = new QPixmap(":/Image/Kirby_fire/kirbyfire_fire(2)_L.png");
+            fireImgs[1][1] = new QPixmap(":/Image/Kirby_fire/kirbyfire_fire(2)_R.png");
+            fireImgs[2][0] = new QPixmap(":/Image/Kirby_fire/kirbyfire_fire(3)_L.png");
+            fireImgs[2][1] = new QPixmap(":/Image/Kirby_fire/kirbyfire_fire(3)_R.png");
+        }
+
+        int side = kirby.facingRight ? 1 : 0;
+        QPixmap *img = fireImgs[fireAnimFrame][side];
+        if (img && !img->isNull()) {
+            painter.drawPixmap(
+                (int)(fireAttackRect.x() - cameraX),
+                (int)fireAttackRect.y(),
+                168, 100, *img
+            );
+        }
     }
 
-    // 7. 畫kirby
+    // 6. 畫kirby
     kirby.draw(painter, cameraX);
+
+    /* 畫火焰
+    if (fireAttackActive) {
+        int fireW = 168, fireH = 100;
+        QString firePath = kirby.facingRight ? ":/Image/Kirby_fire/kirbyfire_fire(1)_R.png"
+                                             : ":/Image/Kirby_fire/kirbyfire_fire(1)_L.png";
+        painter.drawPixmap((int)(fireAttackRect.x() - cameraX),
+                           (int)fireAttackRect.y(),
+                           fireW, fireH, QPixmap(firePath));
+    }*/
 
     // 畫slope
     for (auto &s : slopes) {
@@ -324,9 +433,13 @@ void GameWindow::drawStartMenu(QPainter &painter)
     */
 }
 
+// drawGameOver：根據 gameOverOption 顯示不同圖片
 void GameWindow::drawGameOver(QPainter &painter)
 {
-    QPixmap bg(":/Image/background/game_over_continue.png");
+    QString bgPath = (gameOverOption == 0)
+        ? ":/Image/background/game_over_continue.png"
+        : ":/Image/background/game_over_quit.png";
+    QPixmap bg(bgPath);
     painter.drawPixmap(0, 0, width(), height(), bg);
 }
 
@@ -562,28 +675,6 @@ void GameWindow::loadBackground() //載入背景圖
 
 void GameWindow::mousePressEvent(QMouseEvent *event)
 {
-    // 如果現在是 GameOver 狀態，才處理滑鼠點擊
-    if (gameState == GameState::GameOver) {
-        int mouseX = event->x();
-        int mouseY = event->y();
-
-        // 假設 CONTINUE 按鈕在中間偏下
-        if (mouseX > 1100 && mouseX < 1800 && mouseY > 480 && mouseY < 630) {
-            gameState = GameState::StartMenu;
-            kirby.lives = 3;
-            kirby.hp = 3;
-            kirby.x = 100;
-            kirby.y = 400;
-            cameraX = 0;
-            currentStage = 1;
-            loadStage1();
-        }
-        // 假設 QUIT 按鈕在下面一點
-        else if (mouseX > 1100 && mouseX < 1800 && mouseY > 640 && mouseY < 790) {
-            close();
-        }
-    }
-
     // 點擊畫面顯示座標
     float worldX = event->x() + cameraX;
     float worldY = event->y();
@@ -667,6 +758,8 @@ void GameWindow::handleLifeLost() {
         kirby.vx = 0;
         kirby.vy = 0;
         cameraX = 0;
+
+        initStageEnemies(currentStage); // 重新生成當前關卡的敵人
     }
 }
 
@@ -674,7 +767,8 @@ void GameWindow::handleLifeLost() {
 void GameWindow::checkInhale()
 {
     if (!kirby.isInhaling()) return;
-
+    // 已有能力時不可吸入
+    if (kirby.ability != KirbyAbility::None) return;
     QRectF inhaleRect = kirby.getInhaleRect();
 
     for (auto e : enemies) {
@@ -746,33 +840,4 @@ void GameWindow::updateStarBullets(float cameraX)
                        [](const StarBullet &s) { return !s.active; }),
         starBullets.end()
     );
-}
-
-void GameWindow::updateFireAttack()
-{
-    // 按住 X 且有 Fire 能力 → 維持火焰
-    if (keysHeld.contains(Qt::Key_X) && kirby.ability == KirbyAbility::Fire) {
-        if (!currentFireAttack) {
-            currentFireAttack = new FireAttack(kirby.x, kirby.y,
-                                               kirby.facingRight,
-                                               kirby.KIRBY_W, kirby.KIRBY_H);
-        } else {
-            currentFireAttack->update(kirby.x, kirby.y, kirby.facingRight);
-        }
-
-        // 判斷碰到敵人
-        for (auto e : enemies) {
-            if (e->getIsDead()) continue;
-            if (e->type == "Gordo") continue;
-            if (currentFireAttack->getRect().intersects(e->getCollisionBox())) {
-                e->takeDamage();
-            }
-        }
-    } else {
-        // 放開 X → 火焰消失
-        if (currentFireAttack) {
-            delete currentFireAttack;
-            currentFireAttack = nullptr;
-        }
-    }
 }

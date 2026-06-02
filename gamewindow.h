@@ -15,7 +15,6 @@
 #include <vector>
 #include "slopeplatform.h"
 #include "starbullet.h"
-#include "fireattack.h"
 
 enum class GameState {
     StartMenu,   // 開始畫面
@@ -80,8 +79,19 @@ private:
     QSet<int> keysJustPressed;
     QVector<StarBullet> starBullets;
     void updateStarBullets(float cameraX);
-    FireAttack *currentFireAttack = nullptr;
-    void updateFireAttack();
+
+    bool fireAttackActive = false;  // 火焰是否存在
+    int fireAttackTimer = 0;        // 火焰存在計時
+    QRectF fireAttackRect;          // 火焰碰撞範圍
+
+    bool sparkAttackActive = false;
+    int sparkAttackTimer = 0;
+    QRectF sparkAttackRect;
+
+    int fireAnimFrame = 0;
+    int fireAnimCounter = 0;
+    QPixmap *fireImgs[3][2] = {};  // [frame][L/R]
+
 };
 
 #endif // GAMEWINDOW_H

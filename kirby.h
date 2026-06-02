@@ -50,8 +50,7 @@ public:
     static const int KIRBY_W;  // 顯示寬度
     static const int KIRBY_H;   // 一般高度（run 比例）
     static const int KIRBY_CH;   // 蹲下高度（down 比例）
-    static const int KIRBY_CH2;  // 特殊能力的蹲下高度
-
+    static const int FIRE_CH;
     bool isInhaling() const;
     QRectF getInhaleRect() const;  // 吸力範圍
     void inhaleEnemy(QString enemyType);  // 吸入敵人
@@ -62,7 +61,7 @@ public:
     bool isUsingAbility;    // 正在使用能力中
     void useAbility();      // 按 X 使用能力
     void dropAbility();     // 按 V 棄置能力
-    //bool wantsFireAttack;   // 通知 GameWindow 產生火焰
+    bool wantsFireAttack;   // 通知 GameWindow 產生火焰
     bool wantsSparkAttack;  // 通知 GameWindow 產生電流
 
 private:
