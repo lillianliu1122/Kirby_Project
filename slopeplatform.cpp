@@ -20,7 +20,7 @@ bool SlopePlatform::containsX(float x) const
 void SlopePlatform::draw(QPainter &painter, float cameraX)
 {
     // debug 用，畫出綠色斜線
-    painter.setPen(QPen(Qt::green, 2));
+    // painter.setPen(QPen(Qt::green, 2));
     painter.drawLine((int)(x1 - cameraX), (int)y1,
                      (int)(x2 - cameraX), (int)y2);
 }

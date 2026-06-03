@@ -80,12 +80,6 @@ void Kirby::loadImages()
                    << QPixmap(":/Image/Kirby_fire/kirbyfire_fly(2)_L.png");
     imgFire_atk_R << QPixmap(":/Image/Kirby_fire/kirbyfire_attack_R.png");
     imgFire_atk_L << QPixmap(":/Image/Kirby_fire/kirbyfire_attack_L.png");
-    /*imgFire_atk_R  << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(1)_R.png")
-                   << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(2)_R.png")
-                   << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(3)_R.png");
-    imgFire_atk_L  << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(1)_L.png")
-                   << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(2)_L.png")
-                   << QPixmap(":/Image/Kirby_fire/kirbyfire_fire(3)_L.png");*/
     imgFire_down_R << QPixmap(":/Image/Kirby_fire/kirbyfire_down_R.png");
     imgFire_down_L << QPixmap(":/Image/Kirby_fire/kirbyfire_down_L.png");
 

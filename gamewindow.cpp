@@ -22,12 +22,12 @@ GameWindow::GameWindow(QWidget *parent)
 
     cameraX = 0;
 
-    //currentStage = 1;
-    //loadStage1();
+    currentStage = 1;
+    loadStage1();
     loadBackground();
 
-    currentStage = 2; //暫時
-    loadStage2();
+    //currentStage = 2; //暫時
+    //loadStage2();
 
     portals.append(Portal(4650, 550, PortalType::ToStage2));  // Stage1 終點
 }
@@ -290,13 +290,13 @@ void GameWindow::paintEvent(QPaintEvent *event)
             break;
     }
 
-    // 畫碰撞框（debug 用，之後刪掉）
+    /* 畫碰撞框（debug 用，之後刪掉）
     painter.setPen(QPen(Qt::red, 2));
     painter.setBrush(Qt::NoBrush);
     for (auto &p : platforms) {
         QRectF r = p.getRect();
         painter.drawRect((int)(r.x() - cameraX), (int)r.y(), (int)r.width(), (int)r.height());
-    }
+    }*/
 }
 
 void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
@@ -522,7 +522,6 @@ void GameWindow::loadStage1()//布置platform位置
 { //建立很多 Platform 物件，放進 platforms 這個列表
     platforms.clear();
 
-    // === Frame 1 (x: 0 ~ 1620) ===
     // 地板
     platforms.append(Platform(0,    800, 2170, 100, PlatformType::Invisible));
     platforms.append(Platform(2170, 900, 2660-2170, 100, PlatformType::Invisible));
@@ -530,11 +529,27 @@ void GameWindow::loadStage1()//布置platform位置
     platforms.append(Platform(3675, 390, 3860-3675, 500, PlatformType::Invisible));
     platforms.append(Platform(3860, 600, 3960-3860, 500, PlatformType::Invisible));
     platforms.append(Platform(3960, 815, 4860, 100, PlatformType::Invisible));
+
+    // === Frame 1 (x: 0 ~ 1620) ===
     // 平台
     platforms.append(Platform(700,  450,  215, 40, PlatformType::Floor));
-    platforms.append(Platform(2400, 400,  320, 40, PlatformType::Floor));
+    platforms.append(Platform(1227,  338,  215, 40, PlatformType::Floor));
     // 磚頭
-    // platforms.append(Platform(500,  700,   80, 40, PlatformType::Brick));
+    platforms.append(Platform(292,  700,   210, 100, PlatformType::Brick));
+    platforms.append(Platform(392,  600,   110, 100, PlatformType::Brick));
+
+    // === Frame 2 (x: 1620 ~ 3240 ) ===
+    platforms.append(Platform(2400, 400,  320, 40, PlatformType::Floor));
+    platforms.append(Platform(3112, 540,  215, 40, PlatformType::Floor));
+    platforms.append(Platform(1762,  600,   110, 100, PlatformType::Brick));
+    platforms.append(Platform(1762,  700,   110, 100, PlatformType::Brick));
+    platforms.append(Platform(1872,  700,   110, 100, PlatformType::Brick));
+
+    // === Frame 3 (x: 3240 ~ 4860 ) ===
+    platforms.append(Platform(4219, 543,  107, 40, PlatformType::Floor));
+    platforms.append(Platform(4449, 280,  107, 40, PlatformType::Floor));
+    platforms.append(Platform(3676,  280,   110, 100, PlatformType::Brick));
+
     initStageEnemies(1);
 
     tomatoCollected = false;
@@ -559,24 +574,34 @@ void GameWindow::loadStage2()
     slopes.append(SlopePlatform(5903, 720, 6072, 800));
     slopes.append(SlopePlatform(6907, 795, 7085, 900));
 
-    //平台
-    //(floor)
-    platforms.append(Platform(4094, 550, 215, 40, PlatformType::Floor));
-    platforms.append(Platform(4564, 434, 215, 40, PlatformType::Floor));
-    platforms.append(Platform(4960, 550, 215, 40, PlatformType::Floor));
-    platforms.append(Platform(5388, 434, 215, 40, PlatformType::Floor));
-    platforms.append(Platform(1922, 450, 320, 40, PlatformType::Floor));
+    // === Frame 1 (x: 0 ~ 1620) ===
     platforms.append(Platform(587, 450, 215, 40, PlatformType::Floor));
-
-    //(brick)
+    platforms.append(Platform(321, 600, 107, 40, PlatformType::Floor));
     platforms.append(Platform(1160, 800, 320, 100, PlatformType::Brick));
     platforms.append(Platform(1260, 700, 220, 100, PlatformType::Brick));
     platforms.append(Platform(1365, 600, 115, 100, PlatformType::Brick));
 
-    // 斷開的地板：左半邊
-    //platforms.append(Platform(0, 900, 2000, 40, PlatformType::Invisible));
-    // 斷開的地板：右半邊
-    //platforms.append(Platform(2200, 900, 5900, 40, PlatformType::Invisible));
+    // === Frame 2 (x: 1620 ~ 3240 ) ===
+    platforms.append(Platform(1922, 450, 320, 40, PlatformType::Floor));
+    platforms.append(Platform(3206, 357, 107, 40, PlatformType::Floor));
+    platforms.append(Platform(3468, 500, 107, 40, PlatformType::Floor));
+    platforms.append(Platform(3046, 700, 115, 100, PlatformType::Brick));
+
+    // === Frame 3 (x: 3240 ~ 4860 ) ===
+    platforms.append(Platform(4094, 550, 107, 40, PlatformType::Floor));
+    platforms.append(Platform(4564, 434, 107, 40, PlatformType::Floor));
+    platforms.append(Platform(4347, 870, 530, 100, PlatformType::Brick));
+
+    // === Frame 4 (x: 4860 ~ 6480 ) ===
+    platforms.append(Platform(4960, 550, 107, 40, PlatformType::Floor));
+    platforms.append(Platform(5388, 434, 107, 40, PlatformType::Floor));
+    platforms.append(Platform(6246, 600, 110, 100, PlatformType::Brick));
+    platforms.append(Platform(6246, 700, 220, 100, PlatformType::Brick));
+
+    // === Frame 5 (x: 6480 ~ 8100 ) ===
+    platforms.append(Platform(6676, 390, 215, 40, PlatformType::Floor));
+    platforms.append(Platform(7314, 500, 215, 40, PlatformType::Floor));
+    platforms.append(Platform(7123, 800, 110, 100, PlatformType::Brick));
 
     // Stage 2 終點門
     portals.append(Portal(7800, 620, PortalType::Goal));
