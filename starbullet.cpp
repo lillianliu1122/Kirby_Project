@@ -8,6 +8,7 @@ StarBullet::StarBullet(float x, float y, bool goingRight)
 {
 }
 
+// 星星彈移動
 void StarBullet::update()
 {
     if (!active) return;
@@ -23,6 +24,7 @@ void StarBullet::draw(QPainter &painter, float cameraX)
     painter.drawPixmap(drawX, (int)y, W, H, *img);
 }
 
+// 碰撞判定
 QRectF StarBullet::getRect() const
 {
     return QRectF(x, y, W, H);

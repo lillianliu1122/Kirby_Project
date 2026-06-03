@@ -50,6 +50,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
             checkSlopeCollisions();
             checkPortal();
             checkInhale();
+            checkPuffAttack();
 
             // 生成星星彈
             if (kirby.wantsToSpitStar) {
@@ -60,41 +61,15 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
             }
             updateStarBullets(cameraX);
 
-            /* 火焰生成
-            if (kirby.wantsFireAttack) {
-                kirby.wantsFireAttack = false;
-                float fireX = kirby.facingRight ? kirby.x + kirby.KIRBY_W * 2 : kirby.x - 168;
-                float fireY = kirby.y + (kirby.KIRBY_H - 100) / 2;
-                fireAttackRect = QRectF(fireX, fireY, 168, 100);
-                fireAttackActive = true;
-                fireAttackTimer = 60; // 持續 60 幀（約 1 秒），可自行調整
-            }
-
-            // 火焰存在期間的判定
-            if (fireAttackActive) {
-                fireAttackTimer--;
-
-                for (auto e : enemies) {
-                    if (e->getIsDead()) continue;
-                    if (fireAttackRect.intersects(e->getCollisionBox())) {
-                        e->takeDamage();
-                        break;
-                    }
-                }
-
-                if (fireAttackTimer <= 0) {
-                    fireAttackActive = false; // 時間到消失
-                }
-            }*/
             // 按下 X 觸發噴火，設定持續時間
             if (kirby.ability == KirbyAbility::Fire && keysJustPressed.contains(Qt::Key_X)) {
-                fireAttackTimer = 60; // 按下時設定 600 幀 = 1 秒
+                fireAttackTimer = 30; // 按下時設定 30 幀 = 0.5 秒
                 kirby.isUsingAbility = true;
             }
 
             // 按住 X 時持續重置計時器
             if (kirby.ability == KirbyAbility::Fire && keysHeld.contains(Qt::Key_X)) {
-                fireAttackTimer = 60; // 一直按著就一直重置，不會倒數到0
+                fireAttackTimer = 30;
                 kirby.isUsingAbility = true;
             }
 
@@ -119,6 +94,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                     if (e->getIsDead()) continue;
                     if (e->type == "Gordo") continue;
                     if (fireAttackRect.intersects(e->getCollisionBox())) {
+                        qDebug() << "Fire 消滅！敵人種類：" << e->capability;
                         e->takeDamage();
                     }
                 }
@@ -128,27 +104,26 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                 kirby.isUsingAbility = false;
             }
 
-            // 把原本的 wantsFireAttack 和 fireAttackTimer 相關的程式碼刪掉
-
             // Spark 攻擊生成
             if (kirby.wantsSparkAttack) {
                 kirby.wantsSparkAttack = false;
                 sparkAttackActive = true;
-                sparkAttackTimer = 40;
-                // 不在這裡設 rect，讓下面的更新區塊統一處理
+                sparkAttackTimer = 30;
+            }
+            // 長按 X 時持續重置計時器
+            if (kirby.ability == KirbyAbility::Spark && keysHeld.contains(Qt::Key_X) && sparkAttackActive) {
+                sparkAttackTimer = 30; // 一直按著就一直重置
             }
 
             // Spark 存在期間的判定
             if (sparkAttackActive) {
                 sparkAttackTimer--;
 
-                // 每幀更新 sparkAttackRect 跟著 kirby
                 int radius = 80;
                 sparkAttackRect = QRectF(kirby.x - radius, kirby.y - radius,
                                          kirby.KIRBY_W + radius * 2, kirby.KIRBY_H + radius * 2);
 
-                // 禁止移動
-                kirby.vx = 0;
+                kirby.vx = 0; // 禁止移動
 
                 for (auto e : enemies) {
                     if (e->getIsDead()) continue;
@@ -164,18 +139,15 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                 }
             }
 
-            // 敵人行為更新與戰鬥判定區塊
+            // 敵人行為
             for (Enemy* enemy : enemies) {
-                // 1. 更新敵人的移動邏輯與狀態（傳入卡比座標，供怪判斷攻擊時機）
                 enemy->updateBehavior(kirby.x, kirby.y);
-                enemy->checkWallCollision(platforms); // 這是關鍵的一步，防止穿牆！
-                // 2. 檢查怪物是否離開鏡頭太遠，離開就暫時移除，卡比回頭時重新生成
+                enemy->checkWallCollision(platforms);
                 enemy->checkRespawn(cameraX, 1620);
 
                 if (HotHead* h = dynamic_cast<HotHead*>(enemy)) {
                     h->updateFireBall(kirby.x, kirby.y, kirby.getRect().toRect(), platforms, slopes);
 
-                    // ✅ 加這個檢查，死亡後跳過所有傷害判定
                     if (!h->getIsDead()) {
                         // 火球傷害
                         if (h->fireBall.hitKirby) {
@@ -199,7 +171,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                     }
                 }
 
-                // 身體碰撞
+                // kirby 與敵人碰撞
                 if (!enemy->getIsDead() && kirby.getRect().intersects(enemy->getCollisionBox())) {
                     if (!kirby.isInvincible) {
                         kirby.takeDamage();
@@ -210,7 +182,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                 // 偵測電流攻擊
                 if (Sparky* s = dynamic_cast<Sparky*>(enemy)) {
                     if (s->isDischarging) {
-                        int radius = 60; // 跟你 draw 的數值一樣
+                        int radius = 60;
                         QRectF electricRect(s->x - radius, s->y - radius, s->width + (radius * 2), s->height + (radius * 2));
                         if (kirby.getRect().intersects(electricRect)) {
                             if (!kirby.isInvincible) {
@@ -222,7 +194,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                 }
             }
 
-            // tomato碰撞
+            // kirby 與 tomato 碰撞
             for (auto &t : tomatoes) {
                 if (t.isActive && kirby.getRect().intersects(t.getRect())) {
                     kirby.hp = 3;          // 補滿 HP
@@ -231,18 +203,17 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                 }
             }
 
-            // 1UP碰撞
+            // kirby 與 1UP碰撞
             for (auto &life : oneUps) {
                 if (!life.isCollected && kirby.getRect().intersects(life.getRect())) {
                     life.isCollected = true; // 隱藏道具
                     oneUpCollected = true;
-                    if (kirby.lives < 3) { // 假設你希望生命值上限是 3
+                    if (kirby.lives < 3) {
                         kirby.lives += 1;
                     }
                 }
             }
-            // hole判斷
-            // 如果卡比的 y 座標大於視窗高度 (1080)，代表掉進了 Hole
+            // hole判斷(如果卡比的 y 座標大於1080，代表掉進了 Hole)
             if (kirby.y > height()) {
                 handleLifeLost();
             }
@@ -253,7 +224,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
 
             if (kirby.x < 0) kirby.x = 0;
             if (kirby.x > mapWidth - kirby.KIRBY_W) kirby.x = mapWidth - kirby.KIRBY_W;
-
+            if (kirby.y < 0) kirby.y = 0;
             break;
 
         case GameState::GameOver:
@@ -274,7 +245,7 @@ void GameWindow::paintEvent(QPaintEvent *event)
 
     switch (gameState) {
         case GameState::StartMenu:
-            drawStartMenu(painter);   // 之後新增
+            drawStartMenu(painter);
             break;
 
         case GameState::Playing:
@@ -282,26 +253,18 @@ void GameWindow::paintEvent(QPaintEvent *event)
             break;
 
         case GameState::GameOver:
-            drawGameOver(painter);    // 之後新增
+            drawGameOver(painter);
             break;
 
         case GameState::StageClear:
             drawStageClear(painter);
             break;
     }
-
-    /* 畫碰撞框（debug 用，之後刪掉）
-    painter.setPen(QPen(Qt::red, 2));
-    painter.setBrush(Qt::NoBrush);
-    for (auto &p : platforms) {
-        QRectF r = p.getRect();
-        painter.drawRect((int)(r.x() - cameraX), (int)r.y(), (int)r.width(), (int)r.height());
-    }*/
 }
 
 void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
 {
-    // 1. 天空背景（最底層）
+    // 天空背景（最底層）
     QPixmap &sky = (currentStage == 1) ? bgSky1 : bgSky2;
     if (!sky.isNull()) {
         painter.drawPixmap(0, 0, 1620, 1080, sky);
@@ -309,13 +272,12 @@ void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
         painter.fillRect(0, 0, 1620, 1080, QColor(135, 206, 235));
     }
 
-    // 2. 畫平台
+    // 畫平台
     for (auto &p : platforms) {
         p.draw(painter, cameraX);
     }
 
-
-    // 3. 貼地形圖
+    // 貼地形圖
     if (currentStage == 1) {
         for (int i = 0; i < 3; i++) {
             if (bgStage1[i].isNull()) continue;
@@ -338,7 +300,7 @@ void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
         }
     }
 
-    // 4. 畫傳送門
+    // 畫傳送門
     for (auto &p : portals) {
         p.draw(painter, cameraX);
     }
@@ -353,7 +315,7 @@ void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
 
     painter.translate(cameraX, 0);  // 畫完怪物後移回畫布
 
-    // 5. 畫星星彈
+    // 畫星星彈
     for (auto &s : starBullets) {
         s.draw(painter, cameraX);
     }
@@ -380,18 +342,8 @@ void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
         }
     }
 
-    // 6. 畫kirby
+    // 畫kirby
     kirby.draw(painter, cameraX);
-
-    /* 畫火焰
-    if (fireAttackActive) {
-        int fireW = 168, fireH = 100;
-        QString firePath = kirby.facingRight ? ":/Image/Kirby_fire/kirbyfire_fire(1)_R.png"
-                                             : ":/Image/Kirby_fire/kirbyfire_fire(1)_L.png";
-        painter.drawPixmap((int)(fireAttackRect.x() - cameraX),
-                           (int)fireAttackRect.y(),
-                           fireW, fireH, QPixmap(firePath));
-    }*/
 
     // 畫slope
     for (auto &s : slopes) {
@@ -399,37 +351,34 @@ void GameWindow::drawGame(QPainter &painter) //畫出所有要顯示的物件
     }
 
     // 畫 HP 數字與 Lives
-    painter.resetTransform(); // 重置畫布偏移，確保 UI 固定在右下角
-
-    // UI 整體起始位置 (設定在螢幕右下角)
-    int uiStartX = width() - 350; // 調整這個值可以左右移動整個 UI 區塊
+    painter.resetTransform();
+    int uiStartX = width() - 350;
     int uiStartY = height() - 80;
     int iconSize = 40;
-
-    // 畫 Lives 圖示與數字
     QPixmap lifeIcon(":/Image/item/life.png");
     painter.drawPixmap(uiStartX-30, uiStartY, iconSize, iconSize, lifeIcon);
 
     painter.setFont(QFont("Arial", 28, QFont::Bold));
-    // 1. 先畫粉紅色的 "x"
+    // 先畫粉紅色的 "x"
     painter.setPen(QColor(255, 162, 222));
     painter.drawText(uiStartX + iconSize -20, uiStartY + 35, "x");
-    // 2. 再畫黃色的數字 (計算位置稍微向右偏移)
+    // 再畫黃色的數字
     painter.setPen(Qt::yellow);
     QString livesStr = QString("%1").arg(kirby.lives, 2, 10, QChar('0'));
     painter.drawText(uiStartX + iconSize + 10, uiStartY + 35, livesStr);
 
-    // 3. 畫 HP 圖片 (如果 HP 滿的顯示滿血圖，否則顯示空血圖)
+    // 畫 HP 圖片
     int hpStartX = uiStartX + 140;
     for (int i = 0; i < 3; ++i) {
         QPixmap hpImg = (i < kirby.hp) ? QPixmap(":/Image/item/HP_1.png") : QPixmap(":/Image/item/HP_0.png");
-        // 放在 Lives 圖示的上方
         painter.drawPixmap(hpStartX + (i * 45), uiStartY, iconSize, iconSize, hpImg);
     }
+
     // 畫tomato
     for (auto &t : tomatoes) {
         t.draw(painter, cameraX);
     }
+
     // 畫1UP
     for (auto &life : oneUps) {
         life.draw(painter, cameraX);
@@ -443,16 +392,8 @@ void GameWindow::drawStartMenu(QPainter &painter)
     if (!startBg.isNull()) {
         painter.drawPixmap(0, 0, width(), height(), startBg);
     }
-
-    /* 提示文字
-    painter.setPen(Qt::white);
-    painter.setFont(QFont("Arial", 24, QFont::Bold));
-    painter.drawText(rect(), Qt::AlignHCenter | Qt::AlignBottom,
-                     "Press ENTER or SPACE to Start");
-    */
 }
 
-// drawGameOver：根據 gameOverOption 顯示不同圖片
 void GameWindow::drawGameOver(QPainter &painter)
 {
     QString bgPath = (gameOverOption == 0)
@@ -700,6 +641,10 @@ void GameWindow::checkPortal() //由傳送門切換stage
                 kirby.vx = 0;
                 kirby.vy = 0;
                 cameraX = 0;
+                kirby.ability = KirbyAbility::None;
+                kirby.isUsingAbility = false;
+                kirby.isFlying = false;
+                keysHeld.remove(Qt::Key_Up);
             } else if (p.type == PortalType::Goal) {
                 gameState = GameState::StageClear;
             }
@@ -729,18 +674,18 @@ void GameWindow::mousePressEvent(QMouseEvent *event)
     qDebug() << "x:" << worldX << "y:" << worldY;
 }
 
-// =======
 // 新增敵人
-// =======
 void GameWindow::initStageEnemies(int stage) {
-    enemies.clear(); // 換關卡前清空上一關的怪
-    tomatoes.clear(); // 換關卡清空
+    // 換關卡清空
+    enemies.clear();
+    tomatoes.clear();
     oneUps.clear();
+
+    // Stage 1：waddle dee、gordo、tomato
     if (stage == 1) {
-        // Stage 1：只能有小紅豆跟刺球
         // frame 1 (x：0-1620)
         enemies.push_back(new WaddleDee(650, 700, 200));
-        enemies.push_back(new Gordo(1000, 550, 150));
+        enemies.push_back(new Gordo(1000, 500, 200));
         enemies.push_back(new WaddleDee(1400, 700, 200));
         // frame 2 (x：1621-3240)
         enemies.push_back(new Gordo(2100, 550, 150));
@@ -751,6 +696,7 @@ void GameWindow::initStageEnemies(int stage) {
         enemies.push_back(new Gordo(3400, 550, 150));
         enemies.push_back(new Gordo(4000, 550, 150));
         enemies.push_back(new WaddleDee(4300, 715, 100));
+
         // 加tomato
         if (!tomatoCollected) {
             Tomato t;
@@ -760,8 +706,9 @@ void GameWindow::initStageEnemies(int stage) {
             tomatoes.push_back(t);
         }
     }
+
+    // Stage 2：加入hot head、sparky、1up
     else if (stage == 2) {
-        // Stage 2：加入噴火怪和電電怪
         // frame 1 (x：0-1620)
         enemies.push_back(new WaddleDee(400, 800, 100));
         enemies.push_back(new HotHead(900, 800, 200, &platforms));
@@ -771,15 +718,18 @@ void GameWindow::initStageEnemies(int stage) {
         enemies.push_back(new Gordo(2500, 650, 150));
         enemies.push_back(new HotHead(2100, 800, 200, &platforms));
         enemies.push_back(new WaddleDee(2000, 350, 100));
-        enemies.push_back(new Gordo(2900, 550, 150));
+        enemies.push_back(new Gordo(2900, 500, 200));
         // frame 3 (x：3241-4860)
-        enemies.push_back(new Gordo(3850, 450, 150));
+        enemies.push_back(new Gordo(3850, 475, 150));
         enemies.push_back(new HotHead(3300, 700, 200, &platforms));
+        enemies.push_back(new Gordo(4400, 575, 200));
+        enemies.push_back(new Sparky(4650, 775, 50));
         // frame 4 (x：4861-6480)
         enemies.push_back(new Gordo(5800, 475, 150));
         enemies.push_back(new Sparky(6500, 700, 150));
         // frame 5 (x：6481-8100)
         enemies.push_back(new HotHead(7400, 800, 200, &platforms));
+        enemies.push_back(new Gordo(7125, 550, 150));
 
         // 1UP
         if (!oneUpCollected) {
@@ -791,18 +741,18 @@ void GameWindow::initStageEnemies(int stage) {
     }
 }
 
-// =======
 // 生命與重置系統
-// =======
 void GameWindow::handleLifeLost() {
     kirby.lives--; // 扣除一條命
 
     if (kirby.lives <= 0) {
-        gameState = GameState::GameOver; // 生命耗盡，進入遊戲結束
+        gameState = GameState::GameOver; // 生命耗盡，遊戲結束
     } else {
-        // 重置 Kirby 狀態
-        kirby.hp = 3;             // 回復滿血
-        kirby.startInvincible();  // 重生後獲得 2 秒無敵閃爍保護
+        // 重置狀態
+        kirby.hp = 3;
+        kirby.ability = KirbyAbility::None;
+        kirby.isUsingAbility = false;
+        kirby.isFlying = false;
 
         // 重置到關卡起點 (建議依據目前的關卡來決定座標)
         kirby.x = 100;
@@ -837,13 +787,33 @@ void GameWindow::checkInhale()
     }
 }
 
+void GameWindow::checkPuffAttack()
+{
+    if (!kirby.wantsPuffAttack) return;
+    kirby.wantsPuffAttack = false;
+
+    // 吐氣範圍：kirby 前方
+    QRectF puffRect;
+    if (kirby.facingRight)
+        puffRect = QRectF(kirby.x + kirby.KIRBY_W, kirby.y, kirby.KIRBY_W * 2, kirby.KIRBY_H);
+    else
+        puffRect = QRectF(kirby.x - kirby.KIRBY_W * 2, kirby.y, kirby.KIRBY_W * 2, kirby.KIRBY_H);
+
+    for (auto e : enemies) {
+        if (e->getIsDead()) continue;
+        if (e->type == "Gordo") continue;
+        if (puffRect.intersects(e->getCollisionBox())) {
+            e->takeDamage();
+        }
+    }
+}
+
 void GameWindow::updateStarBullets(float cameraX)
 {
     for (auto &s : starBullets) {
         if (!s.active) continue;
 
         s.update();
-
 
         // 超出螢幕視野就消失
         if (s.getRect().x() < cameraX - 100 || s.getRect().x() > cameraX + 1620 + 100) {
@@ -874,6 +844,7 @@ void GameWindow::updateStarBullets(float cameraX)
                 }
             }
         }
+
         // 碰到敵人消失（Gordo 除外）
         for (auto e : enemies) {
             if (e->getIsDead()) continue;

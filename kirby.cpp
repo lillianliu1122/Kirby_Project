@@ -16,8 +16,8 @@ const int Kirby::FIRE_CH = 90;
 Kirby::Kirby()
     : x(100), y(600), vx(0), vy(0),
       onGround(false), facingRight(true),
-      state(KirbyState::Idle), animFrame(0), animCounter(0),
-      isFlying(false), flyCount(0), isMouthful(false), inhaledType(""), wantsToSpitStar(false)
+      wantsToSpitStar(false), isFlying(false), state(KirbyState::Idle), animFrame(0),
+      animCounter(0), flyCount(0), isMouthful(false), inhaledType("")
 {
     loadImages();
     ability = KirbyAbility::None;
@@ -104,7 +104,8 @@ void Kirby::loadImages()
 
 void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
 {
-    updateInvincible();
+    updateInvincible(); // 處理受傷後的無敵時間
+
     // === 最優先：Mouthful 狀態 ===
     if (isMouthful) {
         state = KirbyState::Mouthful;
@@ -135,31 +136,8 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
         return;  // 直接結束，跳過所有跳躍飛行邏輯
     }
 
-    /* 能力使用中：禁止移動
-    if (ability != KirbyAbility::None && keys.contains(Qt::Key_X)) {
-        useAbility();
-        //isUsingAbility = true;
-        vx = 0;
-        vy += GRAVITY;
-        x += vx;
-        y += vy;
-        if (justPressed.contains(Qt::Key_V)) dropAbility();
-        state = KirbyState::Idle;  // 攻擊時維持站立狀態
-        updateAnimation();
-        return;  // 直接 return，跳過移動邏輯
-    }*/
-
+    // fire ability
     if (ability == KirbyAbility::Fire && isUsingAbility) {
-
-        /*if (ability == KirbyAbility::Fire) {
-            // Fire：按住持續，每幀都設 true
-            isUsingAbility = true;
-            wantsFireAttack = true;
-        } else if (ability == KirbyAbility::Spark) {
-            // Spark：只在 sparkAttackActive 時才鎖住不動
-            // 觸發交給 justPressed 處理
-        }*/
-
         vx = 0;
         vy += GRAVITY;
         x += vx;
@@ -171,13 +149,17 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
     }
 
 
-    // Spark：按下瞬間觸發（移到最前面）
+    // spark ability
     if (justPressed.contains(Qt::Key_X) && ability == KirbyAbility::Spark) {
         isUsingAbility = true;
         wantsSparkAttack = true;
     }
+    // Spark：長按時持續維持攻擊狀態
+    if (keys.contains(Qt::Key_X) && ability == KirbyAbility::Spark && isUsingAbility) {
+        wantsSparkAttack = true;
+    }
 
-    // Spark 使用中：禁止移動（現在 isUsingAbility 已經是 true 了）
+    // Spark 使用中：禁止移動
     if (ability == KirbyAbility::Spark && isUsingAbility) {
         vx = 0;
         vy += GRAVITY;
@@ -202,25 +184,40 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
         vx = 0;
     }
 
-    // 蹲下 / 跳躍 / 飛行
+    // 蹲下
     if (keys.contains(Qt::Key_Down) && onGround) {
         state = KirbyState::Crouch;
         vx = 0;
-    } else if (keys.contains(Qt::Key_Up)) {
+    }
+    // 吐氣
+    else if (justPressed.contains(Qt::Key_X) && isFlying) {
+        isFlying = false;
+        wantsPuffAttack = true;
+        vy += GRAVITY;
+        x += vx;
+        y += vy;
+        state = KirbyState::Idle;
+        updateAnimation();
+        return;
+    }
+    // 跳躍與飛行
+    else if (keys.contains(Qt::Key_Up)) {
         if (onGround) {
             vy = JUMP_FORCE;
             onGround = false;
             isFlying = false;
             flyCount = 0;
+            upHoldTimer = 0;
         } else if (!isFlying) {
-            isFlying = true;
-            vy = -8.0f;
+            upHoldTimer++;
+            if (upHoldTimer >= 5) { // 按住 5 幀後進入飛行
+                isFlying = true;
+                vy = -8.0f;
+            }
         } else {
             vy = -4.0f;
         }
-    } /*else {
-        if (isFlying) isFlying = false;
-    }*/
+    }
 
     // 重力
     if (isFlying) {
@@ -236,29 +233,10 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
     }
 
     // 狀態更新
-    /*if (justPressed.contains(Qt::Key_X) && ability != KirbyAbility::None) {
-        useAbility();  // 有能力優先使用，不吸入
-    } else if (keys.contains(Qt::Key_X)) {
-        state = KirbyState::Inhaling;  // 沒能力才吸入
-    } else if (!onGround) {
-        state = isFlying ? KirbyState::Fly : KirbyState::Jump;
-    } else if (keys.contains(Qt::Key_Down)) {
-        state = KirbyState::Crouch;
-    } else if (vx != 0) {
-        state = KirbyState::Run;
-    } else {
-        state = KirbyState::Idle;
-    }*/
-    // 按 X 解除飛行
-    if (justPressed.contains(Qt::Key_X) && isFlying && ability == KirbyAbility::None) {
-        isFlying = false;
-    }
-
-    // 狀態更新
     if (keys.contains(Qt::Key_X)) {
         state = KirbyState::Inhaling;
     } else if (isFlying) {
-        state = KirbyState::Fly;        // 只要 isFlying 就一律顯示飛行圖，不管在不在地上
+        state = KirbyState::Fly;
     } else if (!onGround) {
         state = isFlying ? KirbyState::Fly : KirbyState::Jump;
     } else if (keys.contains(Qt::Key_Down)) {
@@ -269,16 +247,6 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
         state = KirbyState::Idle;
     }
 
-    /* 使用能力（按 X，有能力時）
-    if (justPressed.contains(Qt::Key_X) && ability != KirbyAbility::None) {
-        useAbility();
-    }*/
-
-    // Spark：按下瞬間觸發
-    if (justPressed.contains(Qt::Key_X) && ability == KirbyAbility::Spark) {
-        isUsingAbility = true;
-        wantsSparkAttack = true;
-    }
     // 棄置能力（按 V）
     if (justPressed.contains(Qt::Key_V)) {
         dropAbility();
@@ -289,29 +257,9 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
 
 }
 
-/*void Kirby::updateAnimation()
-{
-    animCounter++;
-
-    // 每 8 幀換一張圖（可調整速度）
-    if (animCounter >= 8) {
-        animCounter = 0;
-        animFrame++;
-    }
-
-    // 防止 animFrame 超出當前動作的圖片數量
-    int maxFrames = 1;
-    switch (state) {
-        case KirbyState::Run:    maxFrames = 4; break;
-        case KirbyState::Jump:   maxFrames = 3; break;
-        case KirbyState::Fly:    maxFrames = 2; break;
-        default:                 maxFrames = 1; break;
-    }
-    if (animFrame >= maxFrames) animFrame = 0;
-}*/
-
 void Kirby::updateAnimation()
 {
+    // 透過累加器達到每 8 個遊戲週期切換一次圖片
     animCounter++;
     if (animCounter >= 8) {
         animCounter = 0;
@@ -434,28 +382,9 @@ void Kirby::draw(QPainter &painter, float cameraX)
         drawW = KIRBY_W * 1.0f;
         drawY = (int)y - (drawH - KIRBY_H);
     }
-    /*
-    if (ability == KirbyAbility::Fire && isUsingAbility) {
-        // kirby 本體用放大版
-        QPixmap kirbyFrame = facingRight ? imgFire_stop_R[0] : imgFire_stop_L[0];
-        painter.drawPixmap(drawX, drawY, drawW, drawH, kirbyFrame);
-
-        // 火焰畫在前方
-        int fireW = 168;
-        int fireH = 100;
-        int fireX = facingRight ? drawX + drawW : drawX - fireW;
-        int fireY = (int)y + (KIRBY_H - fireH) / 2;
-        int atkIdx = animFrame % imgFire_atk_R.size();
-        QPixmap fireFrame = facingRight ? imgFire_atk_R[atkIdx] : imgFire_atk_L[atkIdx];
-        painter.drawPixmap(fireX, fireY, fireW, fireH, fireFrame);
-        return;
-    }*/
 
     if (!frame.isNull()) {
-        /* 蹲下時用原始圖片比例，其他動作維持 50x50 ()
-        if (state == KirbyState::Crouch) {
-            painter.drawPixmap(drawX, drawY + 4*(KIRBY_H - KIRBY_CH), drawW, KIRBY_CH, frame);
-        }*/
+        // spark ability
         if (ability == KirbyAbility::Spark && isUsingAbility) {
             // 電流圖片大小與判定範圍一致
             int sparkRadius = 80;
@@ -465,6 +394,7 @@ void Kirby::draw(QPainter &painter, float cameraX)
             int sparkY = (int)y - sparkRadius;        // 向上偏移讓圖片置中
             painter.drawPixmap(sparkX, sparkY, sparkW, sparkH, frame);
         }
+        // 蹲下
         else if (state == KirbyState::Crouch) {
             if(ability != KirbyAbility::None){
                 int crouchH = FIRE_CH;
@@ -485,34 +415,33 @@ void Kirby::draw(QPainter &painter, float cameraX)
     }
 }
 
+// 地形碰撞判定
 QRectF Kirby::getRect() const
 {
     return QRectF(x, y, KIRBY_W, KIRBY_H);
 }
 
+// 受傷
 void Kirby::takeDamage() {
-    // 如果已經無敵中，就不要重複扣血
-    if (isInvincible) return;
+    if (isInvincible) return; // 若處於無敵狀態，忽略傷害
 
     hp--;
-    startInvincible(); // 扣血後進入無敵閃爍狀態
-    if (hp < 0) {
-        // HP 歸零的邏輯交給 GameWindow 處理 (handleLifeLost)
-        // 這裡只需要確保 HP 不要變成負數
-        hp = 0;
-    }
+    startInvincible(); // 觸發無敵狀態
+    if (hp < 0) hp = 0;
 }
 
+// 無敵狀態啟動
 void Kirby::startInvincible() {
     isInvincible = true;
     invincibleTimer = 120; // 持續 120 幀 (約 2 秒)
 }
 
+// 無敵倒數
 void Kirby::updateInvincible() {
     if (isInvincible) {
         invincibleTimer--;
         if (invincibleTimer <= 0) {
-            isInvincible = false;
+            isInvincible = false; // 無敵時間結束
         }
     }
 }
@@ -522,6 +451,7 @@ bool Kirby::isInhaling() const
     return state == KirbyState::Inhaling;
 }
 
+// 吸入判定
 QRectF Kirby::getInhaleRect() const
 {
     // 吸力範圍：在 Kirby 前方約一個身長
@@ -531,6 +461,7 @@ QRectF Kirby::getInhaleRect() const
         return QRectF(x - KIRBY_W * 2, y, KIRBY_W * 2, KIRBY_H);
 }
 
+// 吸入敵人狀態轉換
 void Kirby::inhaleEnemy(QString enemyType)
 {
     isMouthful = true;
@@ -538,6 +469,7 @@ void Kirby::inhaleEnemy(QString enemyType)
     state = KirbyState::Mouthful;
 }
 
+// 吞下敵人
 void Kirby::swallow()
 {
     if (!isMouthful) return;
@@ -553,16 +485,17 @@ void Kirby::swallow()
     state = KirbyState::Idle;
 }
 
+// 吐出星星
 void Kirby::spitStar()
 {
     if (!isMouthful) return;
     isMouthful = false;
     inhaledType = "";
     state = KirbyState::Idle;
-    wantsToSpitStar = true;  // 通知 GameWindow
-    // 星星彈的生成交給 GameWindow 處理
+    wantsToSpitStar = true;
 }
 
+// 使用 fire / spark ability
 void Kirby::useAbility()
 {
     if (isUsingAbility) return;
@@ -575,6 +508,7 @@ void Kirby::useAbility()
     }
 }
 
+// 棄置能力
 void Kirby::dropAbility()
 {
     ability = KirbyAbility::None;

@@ -16,12 +16,10 @@ struct FireBall {
 class HotHead : public Enemy {
 public:
     enum State { PATROL = 0, FIRE_BALL = 1, FLAME_BREATH = 2 };
-
     HotHead(int startX, int startY, int range, const QVector<Platform>* platforms);
     void updateBehavior(int kirbyX, int kirbyY) override;
     void updateFireBall(int kirbyX, int kirbyY, const QRect& kirbyRect, const QVector<Platform>& platforms, const QVector<SlopePlatform>& slopes);
     void draw(QPainter &painter) override;
-
     FireBall fireBall;
     State state;
     QRect getFlameRect() const;
@@ -31,7 +29,6 @@ private:
     int moveRange, startX, actionTimer, fireBallCooldown;
     bool isFacingRight, isBreathingFire;
     const QVector<Platform>* currentPlatforms;
-
     void updatePatrol();
     void updateFlameBreath();
 };

@@ -9,7 +9,7 @@ public:
     void updateBehavior(int kirbyX, int kirbyY) override;
     void draw(QPainter &painter) override;
 
-    bool isDischarging; // 外部存取用，判斷是否在放電
+    bool isDischarging;
 
 private:
     int timer;

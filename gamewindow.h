@@ -76,6 +76,7 @@ private:
     int gameOverOption = 0; // 0 表示 Continue, 1 表示 Quit
 
     void checkInhale();
+    void checkPuffAttack();
     QSet<int> keysJustPressed;
     QVector<StarBullet> starBullets;
     void updateStarBullets(float cameraX);

@@ -12,14 +12,16 @@ Gordo::Gordo(int startX, int startY, int range)
 void Gordo::updateBehavior(int kirbyX, int kirbyY) {
     Q_UNUSED(kirbyX);
     Q_UNUSED(kirbyY);
-    y += vy * moveDirection; // 7.4 沿預先設定的固定軌跡上下移動 [cite: 13, 43]
+
+    // 沿 Y 軸範圍移動，超出範圍則反轉方向
+    y += vy * moveDirection;
     if (y < startY - moveRange || y > startY + moveRange) {
         moveDirection = -moveDirection;
     }
 
     // 動畫切換
     animationTimer++;
-    if (animationTimer >= 10) { // 數字越大，切換速度越慢
+    if (animationTimer >= 10) {
         frameIndex = 1 - frameIndex; // 在 0 和 1 之間切換
         animationTimer = 0;
     }
