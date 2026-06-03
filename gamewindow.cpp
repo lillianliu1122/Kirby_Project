@@ -432,8 +432,8 @@ void GameWindow::keyPressEvent(QKeyEvent *event)
             // 2. 處理確認選擇 (Key_Return / Key_Space)
             else if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Space) {
                 if (gameOverOption == 0) {
-                // 選 Continue: 重置遊戲並回到 Playing 狀態
-                gameState = GameState::Playing;
+                // 選 Continue: 重置遊戲並回到 Start Menu 狀態
+                gameState = GameState::StartMenu;
                 kirby.lives = 3;
                 kirby.hp = 3;
                 kirby.x = 100;
