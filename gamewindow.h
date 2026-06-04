@@ -45,57 +45,58 @@ private slots:
 private:
     QTimer *timer;
     QSet<int> keysHeld;  // 記錄目前哪些鍵被按住
+    QSet<int> keysJustPressed;
     Kirby kirby;
+
+    float cameraX;  // 攝影機水平偏移量
+    int currentStage;
+    GameState gameState;
+    int gameOverOption = 0; // 0 表示 Continue, 1 表示 Quit
+
+    QVector<Platform> platforms;  // 所有平台
+    QVector<SlopePlatform> slopes; // 放置斜坡
+    QVector<Portal> portals;
+    QVector<StarBullet> starBullets;
     QVector<Tomato> tomatoes;
     QVector<OneUp> oneUps;
-    float cameraX;  // 攝影機水平偏移量
-    QVector<Platform> platforms;  // 所有平台
-    void loadStage1();             // 載入 Stage 1 地圖
-    void initStageEnemies(int stage);  // 用來載入關卡怪物的函式
-    void checkCollisions();        // 碰撞判定
-    QVector<SlopePlatform> slopes; // 放置斜坡
-    void checkSlopeCollisions();
     QPixmap bgStage1[3];  // Stage 1 三個 frame 的背景
     QPixmap bgStage2[5];  // Stage 5 有兩張背景
     QPixmap bgSky1;  // Stage 1 天空
     QPixmap bgSky2;  // Stage 2 天空
-    void loadBackground();
-    std::vector<Enemy*> enemies; // 用來放關卡中所有怪物的動態指標陣列
+    std::vector<Enemy*> enemies; // 用來放關卡中所有敵人的動態指標陣列
 
-    GameState gameState;
-    void drawGame(QPainter &painter);
-    void drawStartMenu(QPainter &painter);
-    void drawGameOver(QPainter &painter);
-    void drawStageClear(QPainter &painter);
+    // Fire 攻擊
+    bool fireAttackActive = false;
+    int fireAttackTimer = 0;
+    QRectF fireAttackRect;
+    int fireAnimFrame = 0;
+    int fireAnimCounter = 0;
+    QPixmap *fireImgs[3][2] = {}; // [frame][L/R]
 
-    QVector<Portal> portals;
-    void checkPortal();
-    void loadStage2();
-    int currentStage;
-
-    int gameOverOption = 0; // 0 表示 Continue, 1 表示 Quit
-
-    void checkInhale();
-    void checkPuffAttack();
-    QSet<int> keysJustPressed;
-    QVector<StarBullet> starBullets;
-    void updateStarBullets(float cameraX);
-
-    bool fireAttackActive = false;  // 火焰是否存在
-    int fireAttackTimer = 0;        // 火焰存在計時
-    QRectF fireAttackRect;          // 火焰碰撞範圍
-
+    // Spark 攻擊
     bool sparkAttackActive = false;
     int sparkAttackTimer = 0;
     QRectF sparkAttackRect;
 
-    int fireAnimFrame = 0;
-    int fireAnimCounter = 0;
-    QPixmap *fireImgs[3][2] = {};  // [frame][L/R]
-
     bool tomatoCollected = false;  // Stage1 番茄
     bool oneUpCollected = false;   // Stage2 1UP
 
+    void loadStage1();             // 載入 Stage 1 地圖
+    void loadStage2();
+    void loadBackground();
+    void initStageEnemies(int stage);  // 用來載入關卡怪物的函式
+
+    void checkCollisions();        // 碰撞判定
+    void checkSlopeCollisions();
+    void checkPortal();
+    void checkInhale();
+    void checkPuffAttack();
+    void updateStarBullets(float cameraX);
+
+    void drawGame(QPainter &painter);
+    void drawStartMenu(QPainter &painter);
+    void drawGameOver(QPainter &painter);
+    void drawStageClear(QPainter &painter);
 };
 
 #endif // GAMEWINDOW_H

@@ -61,13 +61,7 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
             }
             updateStarBullets(cameraX);
 
-            // 按下 X 觸發噴火，設定持續時間
-            if (kirby.ability == KirbyAbility::Fire && keysJustPressed.contains(Qt::Key_X)) {
-                fireAttackTimer = 30; // 按下時設定 30 幀 = 0.5 秒
-                kirby.isUsingAbility = true;
-            }
-
-            // 按住 X 時持續重置計時器
+            // Fire 攻擊生成
             if (kirby.ability == KirbyAbility::Fire && keysHeld.contains(Qt::Key_X)) {
                 fireAttackTimer = 30;
                 kirby.isUsingAbility = true;
@@ -90,12 +84,15 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
                 fireAttackRect = QRectF(fireX, fireY, 168, 100);
                 fireAttackActive = true;
 
-                for (auto e : enemies) {
-                    if (e->getIsDead()) continue;
-                    if (e->type == "Gordo") continue;
-                    if (fireAttackRect.intersects(e->getCollisionBox())) {
-                        qDebug() << "Fire 消滅！敵人種類：" << e->capability;
-                        e->takeDamage();
+                // 只在第一幀（timer 剛被設為 29）判定傷害
+                if (fireAttackTimer == 29) {
+                    for (auto e : enemies) {
+                        if (e->getIsDead()) continue;
+                        if (e->type == "Gordo") continue;
+                        if (fireAttackRect.intersects(e->getCollisionBox())) {
+                            qDebug() << "Fire 消滅！敵人種類：" << e->capability;
+                            e->takeDamage();
+                        }
                     }
                 }
             } else if (kirby.ability == KirbyAbility::Fire && fireAttackTimer <= 0) {
@@ -105,38 +102,34 @@ void GameWindow::gameLoop() //更新每幀畫面 形成動態效果
             }
 
             // Spark 攻擊生成
-            if (kirby.wantsSparkAttack) {
-                kirby.wantsSparkAttack = false;
-                sparkAttackActive = true;
+            if (kirby.ability == KirbyAbility::Spark && keysHeld.contains(Qt::Key_X)) {
                 sparkAttackTimer = 30;
-            }
-            // 長按 X 時持續重置計時器
-            if (kirby.ability == KirbyAbility::Spark && keysHeld.contains(Qt::Key_X) && sparkAttackActive) {
-                sparkAttackTimer = 30; // 一直按著就一直重置
+                kirby.isUsingAbility = true;
             }
 
-            // Spark 存在期間的判定
-            if (sparkAttackActive) {
+            // 電流持續中
+            if (kirby.ability == KirbyAbility::Spark && sparkAttackTimer > 0) {
                 sparkAttackTimer--;
+                kirby.vx = 0;
 
                 int radius = 80;
                 sparkAttackRect = QRectF(kirby.x - radius, kirby.y - radius,
                                          kirby.KIRBY_W + radius * 2, kirby.KIRBY_H + radius * 2);
 
-                kirby.vx = 0; // 禁止移動
-
-                for (auto e : enemies) {
-                    if (e->getIsDead()) continue;
-                    if (sparkAttackRect.intersects(e->getCollisionBox())) {
-                        qDebug() << "Spark 消滅！敵人種類：" << e->capability;
-                        e->takeDamage();
+                // 只在第一幀（timer 剛被設為 29）判定傷害
+                if (sparkAttackTimer == 29) {
+                    for (auto e : enemies) {
+                        if (e->getIsDead()) continue;
+                        if (sparkAttackRect.intersects(e->getCollisionBox())) {
+                            qDebug() << "Spark 消滅！敵人種類：" << e->capability;
+                            e->takeDamage();
+                        }
                     }
                 }
-
-                if (sparkAttackTimer <= 0) {
-                    sparkAttackActive = false;
-                    kirby.isUsingAbility = false;
-                }
+            } else if (kirby.ability == KirbyAbility::Spark && sparkAttackTimer <= 0) {
+                // 時間到，電流消失
+                sparkAttackActive = false;
+                kirby.isUsingAbility = false;
             }
 
             // 敵人行為

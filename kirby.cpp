@@ -22,8 +22,8 @@ Kirby::Kirby()
     loadImages();
     ability = KirbyAbility::None;
     isUsingAbility = false;
-    wantsFireAttack = false;
-    wantsSparkAttack = false;
+    //wantsFireAttack = false;
+    //wantsSparkAttack = false;
 }
 
 void Kirby::loadImages()
@@ -136,7 +136,7 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
         return;  // 直接結束，跳過所有跳躍飛行邏輯
     }
 
-    // fire ability
+    // Fire 使用中：禁止移動
     if (ability == KirbyAbility::Fire && isUsingAbility) {
         vx = 0;
         vy += GRAVITY;
@@ -146,17 +146,6 @@ void Kirby::update(const QSet<int> &keys, const QSet<int> &justPressed)
         state = KirbyState::Idle;
         updateAnimation();
         return;
-    }
-
-
-    // spark ability
-    if (justPressed.contains(Qt::Key_X) && ability == KirbyAbility::Spark) {
-        isUsingAbility = true;
-        wantsSparkAttack = true;
-    }
-    // Spark：長按時持續維持攻擊狀態
-    if (keys.contains(Qt::Key_X) && ability == KirbyAbility::Spark && isUsingAbility) {
-        wantsSparkAttack = true;
     }
 
     // Spark 使用中：禁止移動
@@ -493,19 +482,6 @@ void Kirby::spitStar()
     inhaledType = "";
     state = KirbyState::Idle;
     wantsToSpitStar = true;
-}
-
-// 使用 fire / spark ability
-void Kirby::useAbility()
-{
-    if (isUsingAbility) return;
-    if (ability == KirbyAbility::Fire) {
-        isUsingAbility = true;
-        wantsFireAttack = true;
-    } else if (ability == KirbyAbility::Spark) {
-        isUsingAbility = true;
-        wantsSparkAttack = true;
-    }
 }
 
 // 棄置能力

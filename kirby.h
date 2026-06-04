@@ -57,10 +57,7 @@ public:
 
     KirbyAbility ability;
     bool isUsingAbility;    // 正在使用能力中
-    void useAbility();      // 按 X 使用能力
     void dropAbility();     // 按 V 棄置能力
-    bool wantsFireAttack;   // 通知 GameWindow 產生火焰
-    bool wantsSparkAttack;  // 通知 GameWindow 產生電流
     bool wantsPuffAttack = false;
     bool isFlying;      // 是否在飛行中
 
